@@ -30,7 +30,7 @@ interface PeriodChannel extends Channel {
 }
 
 const PERIODS = [
-  { value: '1', label: 'Hoje', icon: Clock },
+  { value: '1', label: 'Últimas 24 horas', icon: Clock },
   { value: '7', label: 'Últimos 7 dias', icon: Calendar },
   { value: '14', label: 'Últimos 14 dias', icon: Calendar },
   { value: '30', label: 'Últimos 30 dias', icon: Calendar },

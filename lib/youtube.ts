@@ -90,7 +90,7 @@ export async function getChannelDetails(channelId: string): Promise<YouTubeChann
 
 export async function getChannelVideos(
   channelId: string,
-  maxResults: number = 50,
+  maxResults: number = 200,
   publishedAfter?: Date
 ): Promise<YouTubeVideo[]> {
   try {
@@ -109,62 +109,97 @@ export async function getChannelVideos(
 
     const uploadsPlaylistId = channelResponse.data.items[0].contentDetails.relatedPlaylists.uploads;
 
-    // Get videos from the uploads playlist
-    const playlistParams: any = {
-      part: 'snippet',
-      playlistId: uploadsPlaylistId,
-      maxResults: Math.min(maxResults, 50),
-      key: YOUTUBE_API_KEY,
-    };
+    // Collect all video IDs using pagination
+    let allVideoIds: string[] = [];
+    let pageToken: string | undefined = undefined;
+    let totalFetched = 0;
 
-    const playlistResponse = await axios.get(`${YOUTUBE_API_BASE_URL}/playlistItems`, {
-      params: playlistParams,
-    });
+    // Loop through pages until we have enough videos or no more pages
+    while (totalFetched < maxResults) {
+      const remaining = maxResults - totalFetched;
+      const batchSize = Math.min(remaining, 50); // YouTube API limit per request
 
-    const videoIds = playlistResponse.data.items
-      .map((item: any) => item.snippet.resourceId.videoId)
-      .filter((id: string) => id);
+      const playlistParams: any = {
+        part: 'snippet',
+        playlistId: uploadsPlaylistId,
+        maxResults: batchSize,
+        key: YOUTUBE_API_KEY,
+      };
 
-    if (videoIds.length === 0) {
+      // Add pageToken if we're fetching subsequent pages
+      if (pageToken) {
+        playlistParams.pageToken = pageToken;
+      }
+
+      const playlistResponse = await axios.get(`${YOUTUBE_API_BASE_URL}/playlistItems`, {
+        params: playlistParams,
+      });
+
+      const videoIds = playlistResponse.data.items
+        .map((item: any) => item.snippet.resourceId.videoId)
+        .filter((id: string) => id);
+
+      allVideoIds.push(...videoIds);
+      totalFetched += videoIds.length;
+
+      // Get next page token
+      pageToken = playlistResponse.data.nextPageToken;
+
+      // If no more pages or no videos in this page, stop
+      if (!pageToken || videoIds.length === 0) {
+        break;
+      }
+    }
+
+    if (allVideoIds.length === 0) {
       return [];
     }
 
-    // Get video statistics
-    const videosResponse = await axios.get(`${YOUTUBE_API_BASE_URL}/videos`, {
-      params: {
-        part: 'snippet,statistics,contentDetails',
-        id: videoIds.join(','),
-        key: YOUTUBE_API_KEY,
-      },
-    });
+    // Fetch video details in batches (API allows up to 50 IDs per request)
+    const allVideos: YouTubeVideo[] = [];
+    const chunkSize = 50;
 
-    const videos: YouTubeVideo[] = videosResponse.data.items.map((video: any) => {
-      const publishedAt = new Date(video.snippet.publishedAt);
-      
-      // Filter by publishedAfter if provided
-      if (publishedAfter && publishedAt < publishedAfter) {
-        return null;
-      }
+    for (let i = 0; i < allVideoIds.length; i += chunkSize) {
+      const chunk = allVideoIds.slice(i, i + chunkSize);
 
-      const duration = video.contentDetails.duration;
-      const videoType = detectVideoType(duration);
+      const videosResponse = await axios.get(`${YOUTUBE_API_BASE_URL}/videos`, {
+        params: {
+          part: 'snippet,statistics,contentDetails',
+          id: chunk.join(','),
+          key: YOUTUBE_API_KEY,
+        },
+      });
 
-      return {
-        id: video.id,
-        channelId: video.snippet.channelId,
-        title: video.snippet.title,
-        description: video.snippet.description,
-        thumbnailUrl: video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.default?.url,
-        publishedAt,
-        viewCount: parseInt(video.statistics.viewCount || '0'),
-        likeCount: parseInt(video.statistics.likeCount || '0'),
-        commentCount: parseInt(video.statistics.commentCount || '0'),
-        duration,
-        videoType,
-      };
-    }).filter((v: YouTubeVideo | null) => v !== null);
+      const videos: YouTubeVideo[] = videosResponse.data.items.map((video: any) => {
+        const publishedAt = new Date(video.snippet.publishedAt);
+        
+        // Filter by publishedAfter if provided
+        if (publishedAfter && publishedAt < publishedAfter) {
+          return null;
+        }
 
-    return videos;
+        const duration = video.contentDetails.duration;
+        const videoType = detectVideoType(duration);
+
+        return {
+          id: video.id,
+          channelId: video.snippet.channelId,
+          title: video.snippet.title,
+          description: video.snippet.description,
+          thumbnailUrl: video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.default?.url,
+          publishedAt,
+          viewCount: parseInt(video.statistics.viewCount || '0'),
+          likeCount: parseInt(video.statistics.likeCount || '0'),
+          commentCount: parseInt(video.statistics.commentCount || '0'),
+          duration,
+          videoType,
+        };
+      }).filter((v: YouTubeVideo | null) => v !== null);
+
+      allVideos.push(...videos);
+    }
+
+    return allVideos;
   } catch (error) {
     console.error(`Error fetching videos for channel ${channelId}:`, error);
     return [];

@@ -1,13 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Channel } from '@/lib/db';
 import { formatNumber } from '@/lib/utils';
-import { TrendingUp, Flame, Calendar, Clock, ArrowLeft } from 'lucide-react';
+import { TrendingUp, Flame, Calendar, Clock, ArrowLeft, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Loading from '@/components/Loading';
+
+interface VideoInfo {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  publishedAt: Date;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  videoType: 'normal' | 'shorts' | 'live';
+}
 
 interface PeriodChannel extends Channel {
   periodViews: number;
@@ -15,6 +26,7 @@ interface PeriodChannel extends Channel {
   periodLikes: number;
   periodComments: number;
   engagementRate: number;
+  videos: VideoInfo[];
 }
 
 const PERIODS = [
@@ -37,6 +49,7 @@ export default function TrendingPage() {
   const [selectedType, setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchRanking();
@@ -60,6 +73,29 @@ export default function TrendingPage() {
   const getPeriodLabel = () => {
     const period = PERIODS.find(p => p.value === selectedPeriod);
     return period?.label || 'Últimos 30 dias';
+  };
+
+  const toggleRow = (channelId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(channelId)) {
+      newExpanded.delete(channelId);
+    } else {
+      newExpanded.add(channelId);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const getVideoTypeIcon = (type: string) => {
+    switch (type) {
+      case 'shorts': return '📱';
+      case 'live': return '🔴';
+      default: return '🎬';
+    }
+  };
+
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -242,16 +278,24 @@ export default function TrendingPage() {
                     const avgViewsPerVideo = channel.periodVideos > 0 
                       ? channel.periodViews / channel.periodVideos 
                       : 0;
+                    const isExpanded = expandedRows.has(channel.id);
                     
                     return (
+                      <React.Fragment key={channel.id}>
                       <tr 
-                        key={channel.id} 
                         className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                           index < 3 ? 'bg-orange-50 dark:bg-orange-900 dark:bg-opacity-20' : ''
                         }`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => toggleRow(channel.id)}
+                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                              title={isExpanded ? 'Recolher vídeos' : 'Expandir vídeos'}
+                            >
+                              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                            </button>
                             <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                               #{index + 1}
                             </span>
@@ -310,6 +354,80 @@ export default function TrendingPage() {
                           {formatNumber(Math.round(avgViewsPerVideo))}
                         </td>
                       </tr>
+                      {/* Expanded Row - Videos List */}
+                      {isExpanded && channel.videos && channel.videos.length > 0 && (
+                        <tr className="bg-gray-50 dark:bg-gray-900">
+                          <td colSpan={6} className="px-6 py-4">
+                            <div className="space-y-3">
+                              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                                📹 Vídeos do período ({channel.videos.length})
+                              </div>
+                              <div className="grid gap-3 max-h-96 overflow-y-auto">
+                                {channel.videos
+                                  .sort((a, b) => b.viewCount - a.viewCount)
+                                  .map((video) => (
+                                  <div 
+                                    key={video.id}
+                                    className="flex items-start gap-3 bg-white dark:bg-gray-800 p-3 rounded-lg hover:shadow-md transition-shadow"
+                                  >
+                                    {/* Thumbnail */}
+                                    <a 
+                                      href={`https://youtube.com/watch?v=${video.id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-shrink-0"
+                                    >
+                                      {video.thumbnailUrl ? (
+                                        <Image
+                                          src={video.thumbnailUrl}
+                                          alt={video.title}
+                                          width={120}
+                                          height={68}
+                                          className="rounded object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-[120px] h-[68px] bg-gray-200 dark:bg-gray-700 rounded" />
+                                      )}
+                                    </a>
+                                    
+                                    {/* Video Info */}
+                                    <div className="flex-1 min-w-0">
+                                      <a 
+                                        href={`https://youtube.com/watch?v=${video.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 line-clamp-2 flex items-start gap-1"
+                                      >
+                                        <span className="text-base" title={video.videoType}>
+                                          {getVideoTypeIcon(video.videoType)}
+                                        </span>
+                                        {video.title}
+                                        <ExternalLink className="w-3 h-3 flex-shrink-0 mt-1" />
+                                      </a>
+                                      
+                                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                        <span className="flex items-center gap-1">
+                                          👁️ {formatNumber(video.viewCount)} views
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          👍 {formatNumber(video.likeCount)}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          💬 {formatNumber(video.commentCount)}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          📅 {formatDate(video.publishedAt)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>

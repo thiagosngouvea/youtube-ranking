@@ -7,7 +7,8 @@ import { Channel, ChannelStats } from '@/lib/db';
 import { formatNumber, formatDate } from '@/lib/utils';
 import StatsChart from '@/components/StatsChart';
 import Loading from '@/components/Loading';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import ChannelGroupManager from '@/components/ChannelGroupManager';
+import { ArrowLeft, ExternalLink, Users } from 'lucide-react';
 import Image from 'next/image';
 
 export default function ChannelPage() {
@@ -18,6 +19,9 @@ export default function ChannelPage() {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [stats, setStats] = useState<ChannelStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGroupManager, setShowGroupManager] = useState(false);
+  const [allChannels, setAllChannels] = useState<Channel[]>([]);
+  const [secondaryChannels, setSecondaryChannels] = useState<Channel[]>([]);
 
   useEffect(() => {
     fetchChannelData();
@@ -30,9 +34,18 @@ export default function ChannelPage() {
       // Fetch channel details
       const { data: channelsData } = await axios.get('/api/channels');
       const channelData = channelsData.channels.find((c: Channel) => c.id === channelId);
+      setAllChannels(channelsData.channels);
       
       if (channelData) {
         setChannel(channelData);
+        
+        // Fetch secondary channels if this is a primary channel
+        if (channelData.secondaryChannelIds && channelData.secondaryChannelIds.length > 0) {
+          const secondaries = channelsData.channels.filter((c: Channel) =>
+            channelData.secondaryChannelIds?.includes(c.id)
+          );
+          setSecondaryChannels(secondaries);
+        }
       }
       
       // Fetch stats
@@ -42,6 +55,31 @@ export default function ChannelPage() {
       console.error('Error fetching channel data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddSecondary = async (secondaryChannelId: string, groupName?: string) => {
+    try {
+      await axios.post('/api/channels/group/add', {
+        primaryChannelId: channelId,
+        secondaryChannelId,
+        groupName,
+      });
+      await fetchChannelData();
+    } catch (error) {
+      throw new Error('Erro ao adicionar canal secundário');
+    }
+  };
+
+  const handleRemoveSecondary = async (secondaryChannelId: string) => {
+    try {
+      await axios.post('/api/channels/group/remove', {
+        primaryChannelId: channelId,
+        secondaryChannelId,
+      });
+      await fetchChannelData();
+    } catch (error) {
+      throw new Error('Erro ao remover canal secundário');
     }
   };
 
@@ -84,32 +122,55 @@ export default function ChannelPage() {
             Voltar ao Ranking
           </button>
           
-          <div className="flex items-center gap-4">
-            {channel.thumbnailUrl && (
-              <Image
-                src={channel.thumbnailUrl}
-                alt={channel.title}
-                width={80}
-                height={80}
-                className="rounded-full"
-              />
-            )}
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {channel.title}
-              </h1>
-              {channel.customUrl && (
-                <a
-                  href={`https://youtube.com/@${channel.customUrl}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700 mt-2"
-                >
-                  @{channel.customUrl}
-                  <ExternalLink className="w-4 h-4" />
-                </a>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {channel.thumbnailUrl && (
+                <Image
+                  src={channel.thumbnailUrl}
+                  alt={channel.title}
+                  width={80}
+                  height={80}
+                  className="rounded-full"
+                />
               )}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                  {channel.title}
+                </h1>
+                {channel.groupName && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    🏷️ {channel.groupName}
+                  </p>
+                )}
+                {channel.customUrl && (
+                  <a
+                    href={`https://youtube.com/@${channel.customUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-blue-600 hover:text-blue-700 mt-2"
+                  >
+                    @{channel.customUrl}
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
             </div>
+            
+            {/* Botão Gerenciar Grupo - apenas para canais principais */}
+            {channel.channelType === 'primary' && (
+              <button
+                onClick={() => setShowGroupManager(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Users className="w-4 h-4" />
+                Gerenciar Grupo
+                {secondaryChannels.length > 0 && (
+                  <span className="ml-1 px-2 py-0.5 bg-blue-500 rounded-full text-xs">
+                    {secondaryChannels.length}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -207,6 +268,22 @@ export default function ChannelPage() {
           </div>
         )}
       </main>
+
+      {/* Modal de Gerenciamento de Grupo */}
+      {showGroupManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-3xl w-full">
+            <ChannelGroupManager
+              primaryChannel={channel}
+              secondaryChannels={secondaryChannels}
+              allChannels={allChannels}
+              onAddSecondary={handleAddSecondary}
+              onRemoveSecondary={handleRemoveSecondary}
+              onClose={() => setShowGroupManager(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

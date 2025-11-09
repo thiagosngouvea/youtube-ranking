@@ -14,6 +14,11 @@ export interface Channel {
   publishedAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  // Campos para agrupamento de canais
+  parentChannelId?: string; // ID do canal principal (se for secundário)
+  secondaryChannelIds?: string[]; // IDs dos canais secundários (se for principal)
+  groupName?: string; // Nome do grupo (ex: "Flow Podcast Network")
+  channelType: 'primary' | 'secondary'; // Tipo do canal
 }
 
 export interface Video {
@@ -55,6 +60,11 @@ export async function saveChannel(channel: Omit<Channel, 'createdAt' | 'updatedA
     viewCount: Number(channel.viewCount),
     publishedAt: Timestamp.fromDate(channel.publishedAt),
     updatedAt: now,
+    // Garantir valores padrão para campos de agrupamento
+    channelType: channel.channelType || 'primary',
+    parentChannelId: channel.parentChannelId || null,
+    secondaryChannelIds: channel.secondaryChannelIds || [],
+    groupName: channel.groupName || null,
   }, { merge: true });
   
   // Set createdAt only if it's a new document
@@ -82,6 +92,10 @@ export async function getChannel(channelId: string): Promise<Channel | null> {
     viewCount: data.viewCount || 0,
     category: data.category || 'general',
     customUrl: data.customUrl,
+    channelType: data.channelType || 'primary',
+    parentChannelId: data.parentChannelId || undefined,
+    secondaryChannelIds: data.secondaryChannelIds || [],
+    groupName: data.groupName || undefined,
     publishedAt: data.publishedAt?.toDate() || new Date(),
     createdAt: data.createdAt?.toDate() || new Date(),
     updatedAt: data.updatedAt?.toDate() || new Date(),
@@ -109,6 +123,10 @@ export async function getAllChannels(category?: string): Promise<Channel[]> {
       viewCount: data.viewCount || 0,
       category: data.category || 'general',
       customUrl: data.customUrl,
+      channelType: data.channelType || 'primary',
+      parentChannelId: data.parentChannelId || undefined,
+      secondaryChannelIds: data.secondaryChannelIds || [],
+      groupName: data.groupName || undefined,
       publishedAt: data.publishedAt?.toDate() || new Date(),
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
@@ -289,5 +307,211 @@ export async function getVideosByDateRange(daysAgo: number, videoType?: 'normal'
       updatedAt: data.updatedAt?.toDate() || new Date(),
     };
   });
+}
+
+// ===== Funções de Gerenciamento de Grupos de Canais =====
+
+/**
+ * Adiciona um canal secundário a um canal principal
+ */
+export async function addSecondaryChannel(
+  primaryChannelId: string,
+  secondaryChannelId: string,
+  groupName?: string
+): Promise<void> {
+  const primaryRef = db.collection('channels').doc(primaryChannelId);
+  const secondaryRef = db.collection('channels').doc(secondaryChannelId);
+  
+  const [primaryDoc, secondaryDoc] = await Promise.all([
+    primaryRef.get(),
+    secondaryRef.get(),
+  ]);
+  
+  if (!primaryDoc.exists || !secondaryDoc.exists) {
+    throw new Error('Canal principal ou secundário não encontrado');
+  }
+  
+  const primaryData = primaryDoc.data()!;
+  const currentSecondaryIds = primaryData.secondaryChannelIds || [];
+  
+  if (!currentSecondaryIds.includes(secondaryChannelId)) {
+    await primaryRef.update({
+      secondaryChannelIds: [...currentSecondaryIds, secondaryChannelId],
+      channelType: 'primary',
+      groupName: groupName || primaryData.groupName || primaryData.title,
+      updatedAt: Timestamp.now(),
+    });
+  }
+  
+  await secondaryRef.update({
+    parentChannelId: primaryChannelId,
+    channelType: 'secondary',
+    groupName: groupName || primaryData.groupName || primaryData.title,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Remove um canal secundário de um canal principal
+ */
+export async function removeSecondaryChannel(
+  primaryChannelId: string,
+  secondaryChannelId: string
+): Promise<void> {
+  const primaryRef = db.collection('channels').doc(primaryChannelId);
+  const secondaryRef = db.collection('channels').doc(secondaryChannelId);
+  
+  const primaryDoc = await primaryRef.get();
+  if (primaryDoc.exists) {
+    const data = primaryDoc.data()!;
+    const secondaryIds = (data.secondaryChannelIds || []).filter(
+      (id: string) => id !== secondaryChannelId
+    );
+    
+    await primaryRef.update({
+      secondaryChannelIds: secondaryIds,
+      updatedAt: Timestamp.now(),
+    });
+  }
+  
+  await secondaryRef.update({
+    parentChannelId: FieldValue.delete(),
+    channelType: 'primary',
+    groupName: FieldValue.delete(),
+    updatedAt: Timestamp.now(),
+  });
+}
+
+/**
+ * Busca todos os canais de um grupo (principal + secundários)
+ */
+export async function getChannelGroup(primaryChannelId: string): Promise<Channel[]> {
+  const primary = await getChannel(primaryChannelId);
+  
+  if (!primary) {
+    return [];
+  }
+  
+  const channels: Channel[] = [primary];
+  
+  if (primary.secondaryChannelIds && primary.secondaryChannelIds.length > 0) {
+    const secondaryPromises = primary.secondaryChannelIds.map(id => getChannel(id));
+    const secondaries = await Promise.all(secondaryPromises);
+    channels.push(...secondaries.filter((c): c is Channel => c !== null));
+  }
+  
+  return channels;
+}
+
+/**
+ * Busca apenas canais principais (sem os secundários na listagem principal)
+ */
+export async function getPrimaryChannels(category?: string): Promise<Channel[]> {
+  let query = db.collection('channels')
+    .where('channelType', '==', 'primary')
+    .orderBy('viewCount', 'desc');
+  
+  if (category && category !== 'all') {
+    query = query.where('category', '==', category) as any;
+  }
+  
+  const snapshot = await query.get();
+  
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      title: data.title,
+      description: data.description || '',
+      thumbnailUrl: data.thumbnailUrl || '',
+      subscriberCount: data.subscriberCount || 0,
+      videoCount: data.videoCount || 0,
+      viewCount: data.viewCount || 0,
+      category: data.category || 'general',
+      customUrl: data.customUrl,
+      channelType: data.channelType || 'primary',
+      parentChannelId: data.parentChannelId || undefined,
+      secondaryChannelIds: data.secondaryChannelIds || [],
+      groupName: data.groupName || undefined,
+      publishedAt: data.publishedAt?.toDate() || new Date(),
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+    };
+  });
+}
+
+/**
+ * Calcula métricas agregadas de um grupo de canais
+ */
+export interface GroupMetrics {
+  groupName: string;
+  totalViews: number;
+  totalVideos: number;
+  totalLikes: number;
+  totalComments: number;
+  totalSubscribers: number;
+  channels: Channel[];
+}
+
+export async function getGroupMetrics(
+  primaryChannelId: string,
+  daysAgo?: number
+): Promise<GroupMetrics> {
+  const channels = await getChannelGroup(primaryChannelId);
+  const channelIds = channels.map(c => c.id);
+  
+  let totalViews = 0;
+  let totalVideos = 0;
+  let totalLikes = 0;
+  let totalComments = 0;
+  let totalSubscribers = 0;
+  
+  if (daysAgo) {
+    // Métricas do período - buscar vídeos de todos os canais do grupo
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    date.setHours(0, 0, 0, 0);
+    
+    // Buscar vídeos em chunks de 10 (limite do Firestore para 'in')
+    for (let i = 0; i < channelIds.length; i += 10) {
+      const chunk = channelIds.slice(i, i + 10);
+      const snapshot = await db.collection('videos')
+        .where('channelId', 'in', chunk)
+        .where('publishedAt', '>=', Timestamp.fromDate(date))
+        .get();
+      
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        totalViews += data.viewCount || 0;
+        totalLikes += data.likeCount || 0;
+        totalComments += data.commentCount || 0;
+        totalVideos++;
+      });
+    }
+  } else {
+    // Métricas totais dos canais
+    channels.forEach(channel => {
+      totalViews += channel.viewCount;
+      totalVideos += channel.videoCount;
+    });
+  }
+  
+  // Subscribers são sempre do total
+  channels.forEach(channel => {
+    totalSubscribers += channel.subscriberCount;
+  });
+  
+  const primary = channels.find(c => c.channelType === 'primary');
+  const groupName = primary?.groupName || primary?.title || 'Grupo sem nome';
+  
+  return {
+    groupName,
+    totalViews,
+    totalVideos,
+    totalLikes,
+    totalComments,
+    totalSubscribers,
+    channels,
+  };
 }
 

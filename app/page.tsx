@@ -16,6 +16,7 @@ export default function Home() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [channelView, setChannelView] = useState<'all' | 'primary' | 'secondary'>('primary'); // Filtro por tipo de canal
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,12 +26,23 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (selectedCategory === 'all') {
-      setFilteredChannels(channels);
-    } else {
-      setFilteredChannels(channels.filter(c => c.category === selectedCategory));
+    let filtered = channels;
+    
+    // Filtrar por categoria
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(c => c.category === selectedCategory);
     }
-  }, [selectedCategory, channels]);
+    
+    // Filtrar por tipo de canal
+    if (channelView === 'primary') {
+      filtered = filtered.filter(c => c.channelType === 'primary');
+    } else if (channelView === 'secondary') {
+      filtered = filtered.filter(c => c.channelType === 'secondary');
+    }
+    // 'all' mostra todos os canais
+    
+    setFilteredChannels(filtered);
+  }, [selectedCategory, channelView, channels]);
 
   const fetchChannels = async () => {
     try {
@@ -111,26 +123,77 @@ export default function Home() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filters and Export */}
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Filtrar por Categoria
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Filtro por Categoria */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Filtrar por Categoria
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro por Tipo de Canal */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Visualização
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setChannelView('primary')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      channelView === 'primary'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    📌 Principais
+                  </button>
+                  <button
+                    onClick={() => setChannelView('all')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      channelView === 'all'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    📺 Todos
+                  </button>
+                  <button
+                    onClick={() => setChannelView('secondary')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      channelView === 'secondary'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    🔗 Secundários
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {filteredChannels.length > 0 && (
+              <ExportButtons channels={filteredChannels} />
+            )}
           </div>
 
-          {filteredChannels.length > 0 && (
-            <ExportButtons channels={filteredChannels} />
+          {/* Info sobre filtro ativo */}
+          {channelView === 'secondary' && filteredChannels.length === 0 && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300">
+              💡 Nenhum canal secundário encontrado. Adicione canais secundários através da página de cada canal principal.
+            </div>
           )}
         </div>
 

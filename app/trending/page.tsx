@@ -46,21 +46,53 @@ export default function TrendingPage() {
   const [ranking, setRanking] = useState<PeriodChannel[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('30');
   const [selectedType, setSelectedType] = useState('all');
+  const [viewMode, setViewMode] = useState<'individual' | 'groups'>('individual');
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchRanking();
-  }, [selectedPeriod, selectedType]);
+  }, [selectedPeriod, selectedType, viewMode]);
 
   const fetchRanking = async () => {
     try {
       setLoading(true);
-      const typeParam = selectedType !== 'all' ? `&type=${selectedType}` : '';
-      const { data } = await axios.get(`/api/ranking/period?period=${selectedPeriod}${typeParam}`);
-      setRanking(data.ranking || []);
-      setHasData(data.ranking && data.ranking.length > 0 && data.ranking.some((c: PeriodChannel) => c.periodViews > 0));
+      
+      if (viewMode === 'groups') {
+        // Buscar ranking por grupos
+        const typeParam = selectedType !== 'all' ? `&type=${selectedType}` : '';
+        const { data } = await axios.get(`/api/ranking/groups?period=${selectedPeriod}${typeParam}`);
+        
+        // Converter formato de grupos para o formato PeriodChannel
+        const groupRanking = (data.ranking || []).map((group: any) => ({
+          id: group.primaryChannel.id,
+          title: group.groupName,
+          description: `Grupo com ${group.channelsInGroup} canal(is)`,
+          thumbnailUrl: group.primaryChannel.thumbnailUrl,
+          subscriberCount: group.totalSubscribers,
+          videoCount: group.primaryChannel.videoCount,
+          viewCount: group.primaryChannel.viewCount,
+          category: group.primaryChannel.category,
+          channelType: group.primaryChannel.channelType,
+          periodViews: group.totalViews,
+          periodVideos: group.totalVideos,
+          periodLikes: group.totalLikes,
+          periodComments: group.totalComments,
+          engagementRate: group.engagementRate,
+          averageViews: group.averageViewsPerVideo,
+          videos: [], // Não mostrar vídeos individuais no modo grupo por ora
+        }));
+        
+        setRanking(groupRanking);
+        setHasData(groupRanking.length > 0 && groupRanking.some((c: PeriodChannel) => c.periodViews > 0));
+      } else {
+        // Buscar ranking individual
+        const typeParam = selectedType !== 'all' ? `&type=${selectedType}` : '';
+        const { data } = await axios.get(`/api/ranking/period?period=${selectedPeriod}${typeParam}`);
+        setRanking(data.ranking || []);
+        setHasData(data.ranking && data.ranking.length > 0 && data.ranking.some((c: PeriodChannel) => c.periodViews > 0));
+      }
     } catch (error) {
       console.error('Error fetching trending ranking:', error);
       setHasData(false);
@@ -174,6 +206,42 @@ export default function TrendingPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* View Mode Selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Modo de Visualização
+            </label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setViewMode('individual')}
+                className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                  viewMode === 'individual'
+                    ? 'bg-purple-600 text-white shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                <span className="text-xl">👤</span>
+                Individual (Canais)
+              </button>
+              <button
+                onClick={() => setViewMode('groups')}
+                className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                  viewMode === 'groups'
+                    ? 'bg-purple-600 text-white shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                <span className="text-xl">👥</span>
+                Por Grupos
+              </button>
+            </div>
+            {viewMode === 'groups' && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                💡 <strong>Modo Grupos:</strong> Soma as métricas de todos os canais de cada grupo (principal + secundários)
+              </p>
+            )}
           </div>
         </div>
 

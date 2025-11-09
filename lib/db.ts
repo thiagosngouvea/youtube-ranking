@@ -1,5 +1,6 @@
 import { db } from './firebase';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { cache, CACHE_TTL } from './cache';
 
 export interface Channel {
   id: string;
@@ -75,14 +76,22 @@ export async function saveChannel(channel: Omit<Channel, 'createdAt' | 'updatedA
 }
 
 export async function getChannel(channelId: string): Promise<Channel | null> {
+  // Verificar cache primeiro
+  const cacheKey = `channel_${channelId}`;
+  const cached = cache.get<Channel | null>(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+
   const doc = await db.collection('channels').doc(channelId).get();
   
   if (!doc.exists) {
+    cache.set(cacheKey, null, CACHE_TTL.CHANNELS);
     return null;
   }
   
   const data = doc.data()!;
-  return {
+  const channel: Channel = {
     id: doc.id,
     title: data.title,
     description: data.description || '',
@@ -100,9 +109,20 @@ export async function getChannel(channelId: string): Promise<Channel | null> {
     createdAt: data.createdAt?.toDate() || new Date(),
     updatedAt: data.updatedAt?.toDate() || new Date(),
   };
+
+  cache.set(cacheKey, channel, CACHE_TTL.CHANNELS);
+  return channel;
 }
 
 export async function getAllChannels(category?: string): Promise<Channel[]> {
+  // Verificar cache primeiro
+  const cacheKey = `channels_${category || 'all'}`;
+  const cached = cache.get<Channel[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // Se não está em cache, buscar do Firestore
   let query = db.collection('channels').orderBy('viewCount', 'desc');
   
   if (category && category !== 'all') {
@@ -111,7 +131,7 @@ export async function getAllChannels(category?: string): Promise<Channel[]> {
   
   const snapshot = await query.get();
   
-  return snapshot.docs.map(doc => {
+  const channels = snapshot.docs.map(doc => {
     const data = doc.data();
     return {
       id: doc.id,
@@ -132,6 +152,11 @@ export async function getAllChannels(category?: string): Promise<Channel[]> {
       updatedAt: data.updatedAt?.toDate() || new Date(),
     };
   });
+
+  // Armazenar em cache
+  cache.set(cacheKey, channels, CACHE_TTL.CHANNELS);
+  
+  return channels;
 }
 
 // Video operations
@@ -276,6 +301,14 @@ export async function getLatestChannelStats(channelId: string): Promise<ChannelS
 
 // Get videos by date range for all channels
 export async function getVideosByDateRange(daysAgo: number, videoType?: 'normal' | 'shorts'): Promise<Video[]> {
+  // Verificar cache primeiro (CRÍTICO para economizar reads)
+  const cacheKey = `videos_range_${daysAgo}_${videoType || 'all'}`;
+  const cached = cache.get<Video[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // Se não está em cache, buscar do Firestore
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
   date.setHours(0, 0, 0, 0);
@@ -289,7 +322,7 @@ export async function getVideosByDateRange(daysAgo: number, videoType?: 'normal'
   
   const snapshot = await query.orderBy('publishedAt', 'desc').get();
   
-  return snapshot.docs.map(doc => {
+  const videos = snapshot.docs.map(doc => {
     const data = doc.data();
     return {
       id: doc.id,
@@ -307,6 +340,11 @@ export async function getVideosByDateRange(daysAgo: number, videoType?: 'normal'
       updatedAt: data.updatedAt?.toDate() || new Date(),
     };
   });
+
+  // Armazenar em cache por 12 horas (dados atualizados a cada 12h)
+  cache.set(cacheKey, videos, CACHE_TTL.VIDEOS);
+  
+  return videos;
 }
 
 // ===== Funções de Gerenciamento de Grupos de Canais =====
@@ -457,6 +495,13 @@ export async function getGroupMetrics(
   primaryChannelId: string,
   daysAgo?: number
 ): Promise<GroupMetrics> {
+  // Verificar cache primeiro
+  const cacheKey = `group_metrics_${primaryChannelId}_${daysAgo || 'all'}`;
+  const cached = cache.get<GroupMetrics>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const channels = await getChannelGroup(primaryChannelId);
   const channelIds = channels.map(c => c.id);
   
@@ -504,7 +549,7 @@ export async function getGroupMetrics(
   const primary = channels.find(c => c.channelType === 'primary');
   const groupName = primary?.groupName || primary?.title || 'Grupo sem nome';
   
-  return {
+  const metrics: GroupMetrics = {
     groupName,
     totalViews,
     totalVideos,
@@ -513,5 +558,10 @@ export async function getGroupMetrics(
     totalSubscribers,
     channels,
   };
+
+  // Armazenar em cache
+  cache.set(cacheKey, metrics, daysAgo ? CACHE_TTL.VIDEOS : CACHE_TTL.CHANNELS);
+  
+  return metrics;
 }
 

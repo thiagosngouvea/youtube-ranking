@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllChannels, saveChannel, saveVideo, saveChannelStats, getRecentVideos } from '@/lib/db';
 import { getChannelDetails, getChannelVideos } from '@/lib/youtube';
+import { invalidateAfterUpdate } from '@/lib/cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,6 +85,9 @@ export async function POST(request: NextRequest) {
         });
       }
     }
+    
+    // Invalidar cache após atualização
+    invalidateAfterUpdate(channelId);
     
     return NextResponse.json({ 
       success: true,

@@ -45,11 +45,21 @@ const VIDEO_TYPES = [
 
 const VIDEOS_PER_PAGE = 5; // Número de vídeos a carregar por vez
 
+const SORT_OPTIONS = [
+  { value: 'views', label: 'Views' },
+  { value: 'videos', label: 'Número de Vídeos' },
+  { value: 'engagement', label: 'Engajamento' },
+  { value: 'average', label: 'Média de Views' },
+];
+
 export default function TrendingPage() {
   const [ranking, setRanking] = useState<PeriodChannel[]>([]);
+  const [filteredRanking, setFilteredRanking] = useState<PeriodChannel[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('30');
   const [selectedType, setSelectedType] = useState('all');
   const [viewMode, setViewMode] = useState<'individual' | 'groups'>('individual');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'principal' | 'cortes_outros'>('all'); // Novo filtro por categoria
+  const [sortBy, setSortBy] = useState<'views' | 'videos' | 'engagement' | 'average'>('views'); // Ordenação
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -67,6 +77,40 @@ export default function TrendingPage() {
     setHasMoreVideos(new Map());
     fetchRanking();
   }, [selectedPeriod, selectedType, viewMode]);
+
+  // Aplicar filtros e ordenação
+  useEffect(() => {
+    let filtered = [...ranking];
+
+    // Filtrar por categoria (apenas no modo individual, grupos já são sempre principais)
+    if (viewMode === 'individual' && categoryFilter !== 'all') {
+      if (categoryFilter === 'principal') {
+        filtered = filtered.filter(c => c.category === 'principal');
+      } else if (categoryFilter === 'cortes_outros') {
+        filtered = filtered.filter(c => c.category === 'cortes' || c.category === 'outros');
+      }
+    }
+
+    // Ordenar
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'views':
+          return b.periodViews - a.periodViews;
+        case 'videos':
+          return b.periodVideos - a.periodVideos;
+        case 'engagement':
+          return b.engagementRate - a.engagementRate;
+        case 'average':
+          const avgA = a.periodVideos > 0 ? a.periodViews / a.periodVideos : 0;
+          const avgB = b.periodVideos > 0 ? b.periodViews / b.periodVideos : 0;
+          return avgB - avgA;
+        default:
+          return b.periodViews - a.periodViews;
+      }
+    });
+
+    setFilteredRanking(filtered);
+  }, [ranking, categoryFilter, sortBy, viewMode]);
 
   const fetchRanking = async () => {
     try {
@@ -270,7 +314,7 @@ export default function TrendingPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Modo de Visualização
             </label>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => setViewMode('individual')}
                 className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
@@ -293,12 +337,73 @@ export default function TrendingPage() {
                 <span className="text-xl">👥</span>
                 Por Grupos
               </button>
+              
+              {/* Divider */}
+              <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
+              
+              {/* Category Filter (apenas no modo individual) */}
+              {viewMode === 'individual' && (
+                <>
+                  <button
+                    onClick={() => setCategoryFilter('all')}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all text-sm ${
+                      categoryFilter === 'all'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    📺 Todos
+                  </button>
+                  <button
+                    onClick={() => setCategoryFilter('principal')}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all text-sm ${
+                      categoryFilter === 'principal'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    📌 Principal
+                  </button>
+                  <button
+                    onClick={() => setCategoryFilter('cortes_outros')}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all text-sm ${
+                      categoryFilter === 'cortes_outros'
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    ✂️ Cortes + Outros
+                  </button>
+                </>
+              )}
             </div>
             {viewMode === 'groups' && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                 💡 <strong>Modo Grupos:</strong> Soma as métricas de todos os canais de cada grupo (principal + secundários)
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Sort Options */}
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Ordenar Por
+          </label>
+          <div className="flex flex-wrap gap-3">
+            {SORT_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setSortBy(option.value as any)}
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  sortBy === option.value
+                    ? 'bg-indigo-600 text-white shadow-lg scale-105'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -336,14 +441,14 @@ export default function TrendingPage() {
         )}
 
         {/* Stats Summary */}
-        {!loading && hasData && ranking.length > 0 && (
+        {!loading && hasData && filteredRanking.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
                 Total de Views ({getPeriodLabel()})
               </div>
               <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {formatNumber(ranking.reduce((sum, c) => sum + c.periodViews, 0))}
+                {formatNumber(filteredRanking.reduce((sum, c) => sum + c.periodViews, 0))}
               </div>
             </div>
             
@@ -352,7 +457,7 @@ export default function TrendingPage() {
                 Total de Vídeos Publicados
               </div>
               <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {formatNumber(ranking.reduce((sum, c) => sum + c.periodVideos, 0))}
+                {formatNumber(filteredRanking.reduce((sum, c) => sum + c.periodVideos, 0))}
               </div>
             </div>
             
@@ -361,7 +466,7 @@ export default function TrendingPage() {
                 Canal Mais Quente 🔥
               </div>
               <div className="mt-2 text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
-                {ranking[0]?.title || '-'}
+                {filteredRanking[0]?.title || '-'}
               </div>
             </div>
           </div>
@@ -397,7 +502,7 @@ export default function TrendingPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {ranking.map((channel, index) => {
+                  {filteredRanking.map((channel, index) => {
                     const avgViewsPerVideo = channel.periodVideos > 0 
                       ? channel.periodViews / channel.periodVideos 
                       : 0;
@@ -656,7 +761,7 @@ export default function TrendingPage() {
               </table>
             </div>
             
-            {ranking.length === 0 && (
+            {filteredRanking.length === 0 && (
               <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 Nenhum dado disponível para este período. 
                 <br />

@@ -214,7 +214,7 @@ export default function Home() {
           {/* Info sobre filtro ativo */}
           {channelView === 'cortes_outros' && filteredChannels.length === 0 && (
             <div className="p-3 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300">
-              💡 Nenhum canal de cortes ou outros encontrado. Adicione canais com a categoria "Cortes" ou "Outros".
+              💡 Nenhum canal de cortes ou outros encontrado. Adicione canais com a categoria &quot;Cortes&quot; ou &quot;Outros&quot;.
             </div>
           )}
         </div>

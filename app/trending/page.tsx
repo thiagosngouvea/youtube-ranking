@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Channel } from '@/lib/db';
 import { formatNumber } from '@/lib/utils';
@@ -68,51 +68,8 @@ export default function TrendingPage() {
   const [lastVideoIds, setLastVideoIds] = useState<Map<string, string | null>>(new Map()); // Último vídeo carregado (para paginação)
   const [hasMoreVideos, setHasMoreVideos] = useState<Map<string, boolean>>(new Map()); // Se há mais vídeos para carregar
 
-  useEffect(() => {
-    // Limpar estados de vídeos ao mudar período ou tipo
-    setExpandedRows(new Set());
-    setChannelVideos(new Map());
-    setLoadingVideos(new Set());
-    setLastVideoIds(new Map());
-    setHasMoreVideos(new Map());
-    fetchRanking();
-  }, [selectedPeriod, selectedType, viewMode]);
-
-  // Aplicar filtros e ordenação
-  useEffect(() => {
-    let filtered = [...ranking];
-
-    // Filtrar por categoria (apenas no modo individual, grupos já são sempre principais)
-    if (viewMode === 'individual' && categoryFilter !== 'all') {
-      if (categoryFilter === 'principal') {
-        filtered = filtered.filter(c => c.category === 'principal');
-      } else if (categoryFilter === 'cortes_outros') {
-        filtered = filtered.filter(c => c.category === 'cortes' || c.category === 'outros');
-      }
-    }
-
-    // Ordenar
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'views':
-          return b.periodViews - a.periodViews;
-        case 'videos':
-          return b.periodVideos - a.periodVideos;
-        case 'engagement':
-          return b.engagementRate - a.engagementRate;
-        case 'average':
-          const avgA = a.periodVideos > 0 ? a.periodViews / a.periodVideos : 0;
-          const avgB = b.periodVideos > 0 ? b.periodViews / b.periodVideos : 0;
-          return avgB - avgA;
-        default:
-          return b.periodViews - a.periodViews;
-      }
-    });
-
-    setFilteredRanking(filtered);
-  }, [ranking, categoryFilter, sortBy, viewMode]);
-
-  const fetchRanking = async () => {
+  // Buscar ranking (deve ser declarado antes dos useEffects que o usam)
+  const fetchRanking = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -163,7 +120,51 @@ export default function TrendingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod, selectedType, viewMode]);
+
+  useEffect(() => {
+    // Limpar estados de vídeos ao mudar período ou tipo
+    setExpandedRows(new Set());
+    setChannelVideos(new Map());
+    setLoadingVideos(new Set());
+    setLastVideoIds(new Map());
+    setHasMoreVideos(new Map());
+    fetchRanking();
+  }, [selectedPeriod, selectedType, viewMode, fetchRanking]);
+
+  // Aplicar filtros e ordenação
+  useEffect(() => {
+    let filtered = [...ranking];
+
+    // Filtrar por categoria (apenas no modo individual, grupos já são sempre principais)
+    if (viewMode === 'individual' && categoryFilter !== 'all') {
+      if (categoryFilter === 'principal') {
+        filtered = filtered.filter(c => c.category === 'principal');
+      } else if (categoryFilter === 'cortes_outros') {
+        filtered = filtered.filter(c => c.category === 'cortes' || c.category === 'outros');
+      }
+    }
+
+    // Ordenar
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'views':
+          return b.periodViews - a.periodViews;
+        case 'videos':
+          return b.periodVideos - a.periodVideos;
+        case 'engagement':
+          return b.engagementRate - a.engagementRate;
+        case 'average':
+          const avgA = a.periodVideos > 0 ? a.periodViews / a.periodVideos : 0;
+          const avgB = b.periodVideos > 0 ? b.periodViews / b.periodVideos : 0;
+          return avgB - avgA;
+        default:
+          return b.periodViews - a.periodViews;
+      }
+    });
+
+    setFilteredRanking(filtered);
+  }, [ranking, categoryFilter, sortBy, viewMode]);
 
   const getPeriodLabel = () => {
     const period = PERIODS.find(p => p.value === selectedPeriod);
@@ -426,7 +427,7 @@ export default function TrendingPage() {
                 <ol className="list-decimal list-inside space-y-2 text-yellow-700 dark:text-yellow-300 mb-4">
                   <li><strong>Configurar a API do YouTube</strong> no arquivo .env.local</li>
                   <li><strong>Adicionar canais</strong> na página inicial</li>
-                  <li><strong>Clicar em "Atualizar Dados"</strong> para buscar os vídeos</li>
+                  <li><strong>Clicar em &quot;Atualizar Dados&quot;</strong> para buscar os vídeos</li>
                 </ol>
                 <Link 
                   href="/"
@@ -765,7 +766,7 @@ export default function TrendingPage() {
               <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 Nenhum dado disponível para este período. 
                 <br />
-                Execute "Atualizar Dados" no ranking geral primeiro!
+                Execute &quot;Atualizar Dados&quot; no ranking geral primeiro!
               </div>
             )}
           </div>

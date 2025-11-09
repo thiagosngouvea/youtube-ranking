@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveChannel } from '@/lib/db';
-import { getChannelDetails } from '@/lib/youtube';
+import { getChannelByInput } from '@/lib/youtube';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,17 +9,18 @@ export async function POST(request: NextRequest) {
     
     if (!channelId) {
       return NextResponse.json(
-        { error: 'Channel ID is required' },
+        { error: 'Channel ID or URL is required' },
         { status: 400 }
       );
     }
     
     // Fetch channel details from YouTube
-    const channelData = await getChannelDetails(channelId);
+    // Aceita: ID, URL com @handle, URL com /channel/, ou @handle direto
+    const channelData = await getChannelByInput(channelId);
     
     if (!channelData) {
       return NextResponse.json(
-        { error: 'Channel not found' },
+        { error: 'Channel not found. Please check the URL or ID and try again.' },
         { status: 404 }
       );
     }

@@ -161,3 +161,123 @@ export async function searchChannelsByKeyword(keyword: string, maxResults: numbe
   }
 }
 
+/**
+ * Extrai o identificador (ID ou handle) de uma URL do YouTube
+ * Suporta formatos:
+ * - https://www.youtube.com/@handle
+ * - https://www.youtube.com/c/customname
+ * - https://www.youtube.com/channel/UCxxxxx
+ * - https://youtube.com/@handle
+ * - UCxxxxx (ID direto)
+ */
+export function extractChannelIdentifier(input: string): { type: 'id' | 'handle' | 'custom'; value: string } | null {
+  // Remover espaços e quebras de linha
+  const cleaned = input.trim();
+  
+  // Se já é um ID (começa com UC e tem ~24 caracteres)
+  if (/^UC[\w-]{22}$/.test(cleaned)) {
+    return { type: 'id', value: cleaned };
+  }
+  
+  try {
+    const url = new URL(cleaned.startsWith('http') ? cleaned : `https://${cleaned}`);
+    
+    // Formato: youtube.com/@handle
+    if (url.pathname.startsWith('/@')) {
+      const handle = url.pathname.substring(2).split('/')[0];
+      return { type: 'handle', value: handle };
+    }
+    
+    // Formato: youtube.com/c/customname
+    if (url.pathname.startsWith('/c/')) {
+      const custom = url.pathname.substring(3).split('/')[0];
+      return { type: 'custom', value: custom };
+    }
+    
+    // Formato: youtube.com/channel/UCxxxxx
+    if (url.pathname.startsWith('/channel/')) {
+      const id = url.pathname.substring(9).split('/')[0];
+      return { type: 'id', value: id };
+    }
+  } catch (error) {
+    // Se não for URL válida, tentar como handle simples
+    if (cleaned.startsWith('@')) {
+      return { type: 'handle', value: cleaned.substring(1) };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Busca o ID do canal a partir de um handle (@nome) ou custom URL
+ */
+export async function getChannelIdByHandle(handleOrCustom: string): Promise<string | null> {
+  try {
+    // Tenta buscar por forUsername (handle)
+    const response = await axios.get(`${YOUTUBE_API_BASE_URL}/channels`, {
+      params: {
+        part: 'id',
+        forHandle: handleOrCustom,
+        key: YOUTUBE_API_KEY,
+      },
+    });
+
+    if (response.data.items && response.data.items.length > 0) {
+      return response.data.items[0].id;
+    }
+
+    // Se não encontrou, tenta buscar por forUsername (versão antiga)
+    const searchResponse = await axios.get(`${YOUTUBE_API_BASE_URL}/search`, {
+      params: {
+        part: 'snippet',
+        q: handleOrCustom,
+        type: 'channel',
+        maxResults: 1,
+        key: YOUTUBE_API_KEY,
+      },
+    });
+
+    if (searchResponse.data.items && searchResponse.data.items.length > 0) {
+      return searchResponse.data.items[0].id.channelId || searchResponse.data.items[0].snippet.channelId;
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error fetching channel ID for handle ${handleOrCustom}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Função principal para obter dados do canal a partir de qualquer input
+ * Aceita: ID, URL, @handle
+ */
+export async function getChannelByInput(input: string): Promise<YouTubeChannel | null> {
+  // Extrair identificador da URL ou input
+  const identifier = extractChannelIdentifier(input);
+  
+  if (!identifier) {
+    console.error('Could not extract channel identifier from input:', input);
+    return null;
+  }
+  
+  let channelId: string | null = null;
+  
+  if (identifier.type === 'id') {
+    // Já temos o ID
+    channelId = identifier.value;
+  } else {
+    // Precisamos buscar o ID pelo handle ou custom URL
+    channelId = await getChannelIdByHandle(identifier.value);
+  }
+  
+  if (!channelId) {
+    console.error('Could not find channel ID for:', input);
+    return null;
+  }
+  
+  // Buscar detalhes completos do canal
+  return await getChannelDetails(channelId);
+}
+

@@ -53,19 +53,24 @@ export default function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelMo
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              ID do Canal do YouTube
+              URL ou ID do Canal
             </label>
             <input
               type="text"
               value={channelId}
               onChange={(e) => setChannelId(e.target.value)}
-              placeholder="Ex: UCxxx..."
+              placeholder="https://www.youtube.com/@FlowPodcast"
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
               required
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Você pode encontrar o ID na URL do canal
-            </p>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+              <p className="font-medium">Formatos aceitos:</p>
+              <ul className="list-disc list-inside ml-2 space-y-0.5">
+                <li>URL completa: https://www.youtube.com/@FlowPodcast</li>
+                <li>Handle: @FlowPodcast</li>
+                <li>ID do canal: UCE_W61u3nInJOcRQx2Bm2ng</li>
+              </ul>
+            </div>
           </div>
 
           <div>

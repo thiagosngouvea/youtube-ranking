@@ -27,7 +27,7 @@ export interface Video {
   likeCount: number;
   commentCount: number;
   duration: string;
-  videoType: 'normal' | 'shorts' | 'live';
+  videoType: 'normal' | 'shorts';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -257,7 +257,7 @@ export async function getLatestChannelStats(channelId: string): Promise<ChannelS
 }
 
 // Get videos by date range for all channels
-export async function getVideosByDateRange(daysAgo: number, videoType?: 'normal' | 'shorts' | 'live'): Promise<Video[]> {
+export async function getVideosByDateRange(daysAgo: number, videoType?: 'normal' | 'shorts'): Promise<Video[]> {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
   date.setHours(0, 0, 0, 0);

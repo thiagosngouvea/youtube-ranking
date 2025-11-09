@@ -17,7 +17,7 @@ interface VideoInfo {
   viewCount: number;
   likeCount: number;
   commentCount: number;
-  videoType: 'normal' | 'shorts' | 'live';
+  videoType: 'normal' | 'shorts';
 }
 
 interface PeriodChannel extends Channel {
@@ -40,7 +40,6 @@ const VIDEO_TYPES = [
   { value: 'all', label: 'Todos', icon: '📺' },
   { value: 'normal', label: 'Vídeos Normais (≥5min)', icon: '🎬' },
   { value: 'shorts', label: 'Shorts (<5min)', icon: '📱' },
-  { value: 'live', label: 'Lives', icon: '🔴' },
 ];
 
 export default function TrendingPage() {
@@ -88,7 +87,6 @@ export default function TrendingPage() {
   const getVideoTypeIcon = (type: string) => {
     switch (type) {
       case 'shorts': return '📱';
-      case 'live': return '🔴';
       default: return '🎬';
     }
   };

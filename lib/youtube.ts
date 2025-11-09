@@ -26,21 +26,15 @@ export interface YouTubeVideo {
   likeCount: number;
   commentCount: number;
   duration: string;
-  videoType: 'normal' | 'shorts' | 'live';
+  videoType: 'normal' | 'shorts';
 }
 
 /**
- * Detecta o tipo de vídeo baseado na duração e no status de transmissão
+ * Detecta o tipo de vídeo baseado apenas na duração
  * - Shorts: duração < 5 minutos (300 segundos)
- * - Live: liveBroadcastContent = 'live' ou 'upcoming'
- * - Normal: vídeos com 5 minutos ou mais
+ * - Normal: vídeos com 5 minutos ou mais (incluindo lives)
  */
-function detectVideoType(duration: string, liveBroadcastContent?: string): 'normal' | 'shorts' | 'live' {
-  // Se é ou foi uma live
-  if (liveBroadcastContent === 'live' || liveBroadcastContent === 'upcoming') {
-    return 'live';
-  }
-  
+function detectVideoType(duration: string): 'normal' | 'shorts' {
   // Parse ISO 8601 duration (ex: PT1M30S = 1 minuto e 30 segundos)
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (match) {
@@ -153,8 +147,7 @@ export async function getChannelVideos(
       }
 
       const duration = video.contentDetails.duration;
-      const liveBroadcastContent = video.snippet.liveBroadcastContent;
-      const videoType = detectVideoType(duration, liveBroadcastContent);
+      const videoType = detectVideoType(duration);
 
       return {
         id: video.id,

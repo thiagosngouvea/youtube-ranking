@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllChannels, saveChannel, saveVideo, saveChannelStats, getRecentVideos } from '@/lib/db';
+import { getAllChannels, saveChannel, saveVideo, saveChannelStats, getRecentVideos, getChannel } from '@/lib/db';
 import { getChannelDetails, getChannelVideos } from '@/lib/youtube';
 import { invalidateAfterUpdate } from '@/lib/cache';
 
@@ -11,39 +11,48 @@ export async function POST(request: NextRequest) {
     let channelsToUpdate = [];
     
     if (channelId) {
-      // Update single channel - buscar categoria atual do canal
-      const existingChannel = await getAllChannels();
-      const channel = existingChannel.find(c => c.id === channelId);
-      channelsToUpdate = [{ id: channelId, category: channel?.category || 'principal' }];
+      // Update single channel - buscar canal completo do banco
+      const existingChannel = await getChannel(channelId);
+      if (!existingChannel) {
+        return NextResponse.json(
+          { error: 'Channel not found in database' },
+          { status: 404 }
+        );
+      }
+      channelsToUpdate = [existingChannel];
     } else {
       // Update all channels
       const allChannels = await getAllChannels();
-      channelsToUpdate = allChannels.map(c => ({ id: c.id, category: c.category }));
+      channelsToUpdate = allChannels;
     }
     
     const results = [];
     
-    for (const channel of channelsToUpdate) {
+    for (const existingChannel of channelsToUpdate) {
       try {
-        // Fetch latest channel data
-        const channelData = await getChannelDetails(channel.id);
+        // Fetch latest channel data from YouTube
+        const channelData = await getChannelDetails(existingChannel.id);
         
         if (!channelData) {
-          results.push({ id: channel.id, success: false, error: 'Channel not found' });
+          results.push({ id: existingChannel.id, success: false, error: 'Channel not found' });
           continue;
         }
         
-        // Save channel data
+        // Save channel data, preservando campos de agrupamento
         await saveChannel({
           ...channelData,
-          category: channel.category,
+          category: existingChannel.category,
+          // Preservar campos de agrupamento
+          parentChannelId: existingChannel.parentChannelId,
+          secondaryChannelIds: existingChannel.secondaryChannelIds,
+          groupName: existingChannel.groupName,
         });
         
         // Fetch recent videos (last 30 days) - agora com paginação até 2000 vídeos
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
-        const videos = await getChannelVideos(channel.id, 2000, thirtyDaysAgo);
+        const videos = await getChannelVideos(existingChannel.id, 2000, thirtyDaysAgo);
         
         // Save videos
         for (const video of videos) {
@@ -51,14 +60,14 @@ export async function POST(request: NextRequest) {
         }
         
         // Get stats from saved videos
-        const recentVideos = await getRecentVideos(channel.id, 30);
+        const recentVideos = await getRecentVideos(existingChannel.id, 30);
         const totalLikes = recentVideos.reduce((sum, v) => sum + v.likeCount, 0);
         const totalComments = recentVideos.reduce((sum, v) => sum + v.commentCount, 0);
         const viewsLast30Days = recentVideos.reduce((sum, v) => sum + v.viewCount, 0);
         
         // Save channel stats
         await saveChannelStats({
-          channelId: channel.id,
+          channelId: existingChannel.id,
           date: new Date(),
           subscriberCount: channelData.subscriberCount,
           videoCount: channelData.videoCount,
@@ -70,7 +79,7 @@ export async function POST(request: NextRequest) {
         });
         
         results.push({ 
-          id: channel.id, 
+          id: existingChannel.id, 
           success: true, 
           videosUpdated: videos.length 
         });
@@ -79,9 +88,9 @@ export async function POST(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
       } catch (error) {
-        console.error(`Error updating channel ${channel.id}:`, error);
+        console.error(`Error updating channel ${existingChannel.id}:`, error);
         results.push({ 
-          id: channel.id, 
+          id: existingChannel.id, 
           success: false, 
           error: error instanceof Error ? error.message : 'Unknown error'
         });

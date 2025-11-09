@@ -31,9 +31,9 @@ export interface YouTubeVideo {
 
 /**
  * Detecta o tipo de vídeo baseado na duração e no status de transmissão
- * - Shorts: duração <= 60 segundos
+ * - Shorts: duração < 5 minutos (300 segundos)
  * - Live: liveBroadcastContent = 'live' ou 'upcoming'
- * - Normal: demais vídeos
+ * - Normal: vídeos com 5 minutos ou mais
  */
 function detectVideoType(duration: string, liveBroadcastContent?: string): 'normal' | 'shorts' | 'live' {
   // Se é ou foi uma live
@@ -50,8 +50,8 @@ function detectVideoType(duration: string, liveBroadcastContent?: string): 'norm
     
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
     
-    // Shorts são vídeos de até 60 segundos
-    if (totalSeconds <= 60) {
+    // Shorts são vídeos com menos de 5 minutos (300 segundos)
+    if (totalSeconds < 300) {
       return 'shorts';
     }
   }

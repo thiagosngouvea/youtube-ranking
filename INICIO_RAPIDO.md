@@ -145,6 +145,14 @@ Agora você deve ver:
 - ✅ Ranking geral com dados
 - ✅ Trending com visualizações por período
 - ✅ Gráficos na página individual do canal
+- ✅ Filtros por tipo de vídeo (Shorts <5min, Normais ≥5min, Lives)
+
+## 🎬 Tipos de Vídeo
+
+O sistema classifica automaticamente os vídeos em:
+- **📱 Shorts**: Vídeos com menos de 5 minutos (< 300 segundos)
+- **🎬 Vídeos Normais**: Vídeos com 5 minutos ou mais
+- **🔴 Lives**: Transmissões ao vivo (identificadas pela API)
 
 ---
 

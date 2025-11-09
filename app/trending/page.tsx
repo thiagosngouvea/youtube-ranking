@@ -26,8 +26,8 @@ const PERIODS = [
 
 const VIDEO_TYPES = [
   { value: 'all', label: 'Todos', icon: '📺' },
-  { value: 'normal', label: 'Vídeos Normais', icon: '🎬' },
-  { value: 'shorts', label: 'Shorts', icon: '📱' },
+  { value: 'normal', label: 'Vídeos Normais (≥5min)', icon: '🎬' },
+  { value: 'shorts', label: 'Shorts (<5min)', icon: '📱' },
   { value: 'live', label: 'Lives', icon: '🔴' },
 ];
 

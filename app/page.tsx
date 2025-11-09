@@ -10,7 +10,7 @@ import ExportButtons from '@/components/ExportButtons';
 import StatsCards from '@/components/StatsCards';
 import Loading from '@/components/Loading';
 import AuthButton from '@/components/AuthButton';
-import { Plus, RefreshCw, TrendingUp } from 'lucide-react';
+import { Plus, RefreshCw, TrendingUp, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { useAuthAxios } from '@/lib/use-auth-axios';
@@ -112,6 +112,14 @@ export default function Home() {
               >
                 <TrendingUp className="w-4 h-4" />
                 Trending
+              </Link>
+              
+              <Link
+                href="/viral"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-lg hover:from-red-700 hover:to-pink-700 transition-colors"
+              >
+                <Flame className="w-4 h-4" />
+                Virais
               </Link>
               
               {/* Botões Admin - apenas para usuários autenticados */}

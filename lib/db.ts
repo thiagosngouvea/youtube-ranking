@@ -560,3 +560,142 @@ export async function getGroupMetrics(
   return metrics;
 }
 
+// Interface para vídeos virais
+export interface ViralVideo {
+  id: string;
+  title: string;
+  channelId: string;
+  channelTitle: string;
+  thumbnailUrl: string;
+  publishedAt: Date;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  videoType: 'normal' | 'shorts';
+  
+  // Métricas virais
+  channelAverage: number;
+  zScore: number;
+  multiplier: number; // views / média
+  viralLevel: 'bronze' | 'silver' | 'gold' | 'diamond';
+  percentile: number; // Top X% do canal
+}
+
+/**
+ * Busca vídeos virais (com performance muito acima da média do canal)
+ * Usa Z-score para identificar outliers estatísticos
+ */
+export async function getViralVideos(
+  daysAgo?: number,
+  videoType?: 'normal' | 'shorts' | 'all'
+): Promise<ViralVideo[]> {
+  try {
+    // Gerar cache key
+    const cacheKey = `viral_videos_${daysAgo || 'all'}_${videoType || 'all'}`;
+    const cached = cache.get<ViralVideo[]>(cacheKey);
+    if (cached) return cached;
+
+    // Buscar todos os canais
+    const channels = await getAllChannels();
+    const channelMap = new Map(channels.map(c => [c.id, c]));
+
+    // Buscar vídeos do período
+    const videos = daysAgo 
+      ? await getVideosByDateRange(daysAgo, videoType === 'all' ? undefined : videoType)
+      : await db.collection('videos').get().then(snapshot => 
+          snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            publishedAt: doc.data().publishedAt?.toDate(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate(),
+          } as Video))
+        );
+
+    // Filtrar por tipo se necessário
+    const filteredVideos = videoType && videoType !== 'all'
+      ? videos.filter(v => v.videoType === videoType)
+      : videos;
+
+    // Agrupar vídeos por canal
+    const videosByChannel = new Map<string, Video[]>();
+    filteredVideos.forEach(video => {
+      if (!videosByChannel.has(video.channelId)) {
+        videosByChannel.set(video.channelId, []);
+      }
+      videosByChannel.get(video.channelId)!.push(video);
+    });
+
+    // Calcular métricas virais para cada canal
+    const viralVideos: ViralVideo[] = [];
+
+    videosByChannel.forEach((channelVideos, channelId) => {
+      // Precisa de pelo menos 5 vídeos para ter estatística significativa
+      if (channelVideos.length < 5) return;
+
+      const channel = channelMap.get(channelId);
+      if (!channel) return;
+
+      // Calcular média e desvio padrão
+      const viewCounts = channelVideos.map(v => v.viewCount);
+      const mean = viewCounts.reduce((sum, v) => sum + v, 0) / viewCounts.length;
+      
+      const variance = viewCounts.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / viewCounts.length;
+      const stdDev = Math.sqrt(variance);
+
+      // Evitar divisão por zero
+      if (stdDev === 0) return;
+
+      // Calcular Z-score para cada vídeo
+      channelVideos.forEach(video => {
+        const zScore = (video.viewCount - mean) / stdDev;
+        
+        // Considerar viral se Z-score >= 2 (2 desvios padrão acima da média)
+        if (zScore >= 2) {
+          const multiplier = video.viewCount / mean;
+          
+          // Determinar nível viral
+          let viralLevel: 'bronze' | 'silver' | 'gold' | 'diamond';
+          if (zScore >= 10) viralLevel = 'diamond';
+          else if (zScore >= 5) viralLevel = 'gold';
+          else if (zScore >= 3) viralLevel = 'silver';
+          else viralLevel = 'bronze';
+
+          // Calcular percentil
+          const viewsBelow = viewCounts.filter(v => v < video.viewCount).length;
+          const percentile = (viewsBelow / viewCounts.length) * 100;
+
+          viralVideos.push({
+            id: video.id,
+            title: video.title,
+            channelId: video.channelId,
+            channelTitle: channel.title,
+            thumbnailUrl: video.thumbnailUrl,
+            publishedAt: video.publishedAt,
+            viewCount: video.viewCount,
+            likeCount: video.likeCount,
+            commentCount: video.commentCount,
+            videoType: video.videoType,
+            channelAverage: Math.round(mean),
+            zScore: Math.round(zScore * 100) / 100,
+            multiplier: Math.round(multiplier * 10) / 10,
+            viralLevel,
+            percentile: Math.round(percentile * 10) / 10,
+          });
+        }
+      });
+    });
+
+    // Ordenar por Z-score (maior primeiro)
+    viralVideos.sort((a, b) => b.zScore - a.zScore);
+
+    // Armazenar em cache
+    cache.set(cacheKey, viralVideos, CACHE_TTL.VIDEOS);
+
+    return viralVideos;
+  } catch (error) {
+    console.error('Error getting viral videos:', error);
+    return [];
+  }
+}
+

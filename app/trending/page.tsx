@@ -235,16 +235,26 @@ export default function TrendingPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link 
-            href="/"
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar ao Ranking Geral
-          </Link>
+          <div className="flex items-center justify-between mb-4">
+            <Link 
+              href="/"
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar ao Ranking Geral
+            </Link>
+            
+            <Link
+              href="/viral"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-lg hover:from-red-700 hover:to-pink-700 transition-colors"
+            >
+              <Flame className="w-4 h-4" />
+              Virais
+            </Link>
+          </div>
           
           <div className="flex items-center gap-3">
-            <Flame className="w-8 h-8 text-orange-600" />
+            <TrendingUp className="w-8 h-8 text-orange-600" />
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                 Trending - Mais Visualizados

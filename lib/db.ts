@@ -252,3 +252,33 @@ export async function getLatestChannelStats(channelId: string): Promise<ChannelS
   };
 }
 
+// Get videos by date range for all channels
+export async function getVideosByDateRange(daysAgo: number): Promise<Video[]> {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  date.setHours(0, 0, 0, 0);
+  
+  const snapshot = await db.collection('videos')
+    .where('publishedAt', '>=', Timestamp.fromDate(date))
+    .orderBy('publishedAt', 'desc')
+    .get();
+  
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      channelId: data.channelId,
+      title: data.title,
+      description: data.description || '',
+      thumbnailUrl: data.thumbnailUrl || '',
+      publishedAt: data.publishedAt?.toDate() || new Date(),
+      viewCount: data.viewCount || 0,
+      likeCount: data.likeCount || 0,
+      commentCount: data.commentCount || 0,
+      duration: data.duration || '',
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+    };
+  });
+}
+

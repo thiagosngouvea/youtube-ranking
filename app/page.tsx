@@ -10,6 +10,7 @@ import ExportButtons from '@/components/ExportButtons';
 import StatsCards from '@/components/StatsCards';
 import Loading from '@/components/Loading';
 import { Plus, RefreshCw, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -80,6 +81,13 @@ export default function Home() {
               </h1>
             </div>
             <div className="flex gap-3">
+              <Link
+                href="/trending"
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Trending
+              </Link>
               <button
                 onClick={() => setIsModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

@@ -39,11 +39,11 @@ export async function POST(request: NextRequest) {
           category: channel.category,
         });
         
-        // Fetch recent videos (last 30 days) - agora com paginação até 200 vídeos
+        // Fetch recent videos (last 30 days) - agora com paginação até 2000 vídeos
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
-        const videos = await getChannelVideos(channel.id, 200, thirtyDaysAgo);
+        const videos = await getChannelVideos(channel.id, 2000, thirtyDaysAgo);
         
         // Save videos
         for (const video of videos) {

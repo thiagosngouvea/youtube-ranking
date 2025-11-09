@@ -174,7 +174,7 @@ export async function saveVideo(video: Omit<Video, 'createdAt' | 'updatedAt'>): 
   }
 }
 
-export async function getChannelVideos(channelId: string, limit: number = 200): Promise<Video[]> {
+export async function getChannelVideos(channelId: string, limit: number = 2000): Promise<Video[]> {
   const snapshot = await db.collection('videos')
     .where('channelId', '==', channelId)
     .orderBy('publishedAt', 'desc')

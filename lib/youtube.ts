@@ -90,7 +90,7 @@ export async function getChannelDetails(channelId: string): Promise<YouTubeChann
 
 export async function getChannelVideos(
   channelId: string,
-  maxResults: number = 200,
+  maxResults: number = 2000,
   publishedAfter?: Date
 ): Promise<YouTubeVideo[]> {
   try {

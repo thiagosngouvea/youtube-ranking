@@ -241,6 +241,134 @@ export default function Home() {
         onAdd={handleAddChannel}
       />
 
+      {/* Support Section / Apoio ao Projeto */}
+      <footer className="bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border-t border-gray-200 dark:border-gray-700 mt-12 no-print">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                💜 Apoie este Projeto
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Este é um projeto open-source mantido com dedicação. Seu apoio ajuda a mantê-lo funcionando!
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* PIX / Doações */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">💰</span>
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Faça uma Doação via PIX
+                  </h4>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <strong>Chave PIX:</strong>
+                  </p>
+                  <div className="flex items-center gap-2 bg-white dark:bg-gray-900 rounded-lg p-3 border border-green-300 dark:border-green-700">
+                    <code className="text-sm text-green-700 dark:text-green-400 flex-1 break-all">
+                      thiagonunes026@gmail.com
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText('thiagonunes026@gmail.com');
+                        alert('✅ Chave PIX copiada!');
+                      }}
+                      className="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap"
+                      title="Copiar chave PIX"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contato e Redes */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">📬</span>
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Entre em Contato
+                  </h4>
+                </div>
+                <div className="space-y-3">
+                  {/* LinkedIn */}
+                  <a
+                    href="https://www.linkedin.com/in/thiago-gouv%C3%AAa-aa3bb915a/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border border-blue-300 dark:border-blue-700 hover:border-blue-500 dark:hover:border-blue-500 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-[#0A66C2] rounded flex items-center justify-center flex-shrink-0">
+                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        LinkedIn
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        Conecte-se comigo
+                      </p>
+                    </div>
+                  </a>
+
+                  {/* Email */}
+                  <a
+                    href="mailto:thiagonunes026@gmail.com"
+                    className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border border-blue-300 dark:border-blue-700 hover:border-blue-500 dark:hover:border-blue-500 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
+                      <span className="text-xl">📧</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        Email
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        thiagonunes026@gmail.com
+                      </p>
+                    </div>
+                  </a>
+
+                  {/* Sugestões */}
+                  <a
+                    href="mailto:thiagonunes026@gmail.com?subject=Sugestão para YouTube Podcast Ranking"
+                    className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border border-blue-300 dark:border-blue-700 hover:border-blue-500 dark:hover:border-blue-500 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-purple-600 rounded flex items-center justify-center flex-shrink-0">
+                      <span className="text-xl">💡</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                        Sugestões de Features
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        Envie suas ideias
+                      </p>
+                    </div>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Text */}
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Desenvolvido com 💜 por <strong>Thiago Gouvêa</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
+
       {/* Print Styles */}
       <style jsx global>{`
         @media print {

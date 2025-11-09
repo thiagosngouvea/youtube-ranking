@@ -26,7 +26,6 @@ interface PeriodChannel extends Channel {
   periodLikes: number;
   periodComments: number;
   engagementRate: number;
-  videos: VideoInfo[];
 }
 
 const PERIODS = [
@@ -42,6 +41,8 @@ const VIDEO_TYPES = [
   { value: 'shorts', label: 'Shorts (<5min)', icon: '📱' },
 ];
 
+const VIDEOS_PER_PAGE = 5; // Número de vídeos a carregar por vez
+
 export default function TrendingPage() {
   const [ranking, setRanking] = useState<PeriodChannel[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('30');
@@ -50,8 +51,18 @@ export default function TrendingPage() {
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [channelVideos, setChannelVideos] = useState<Map<string, VideoInfo[]>>(new Map()); // Armazena vídeos de cada canal
+  const [loadingVideos, setLoadingVideos] = useState<Set<string>>(new Set()); // Canais com vídeos sendo carregados
+  const [lastVideoIds, setLastVideoIds] = useState<Map<string, string | null>>(new Map()); // Último vídeo carregado (para paginação)
+  const [hasMoreVideos, setHasMoreVideos] = useState<Map<string, boolean>>(new Map()); // Se há mais vídeos para carregar
 
   useEffect(() => {
+    // Limpar estados de vídeos ao mudar período ou tipo
+    setExpandedRows(new Set());
+    setChannelVideos(new Map());
+    setLoadingVideos(new Set());
+    setLastVideoIds(new Map());
+    setHasMoreVideos(new Map());
     fetchRanking();
   }, [selectedPeriod, selectedType, viewMode]);
 
@@ -80,7 +91,6 @@ export default function TrendingPage() {
           periodComments: group.totalComments,
           engagementRate: group.engagementRate,
           averageViews: group.averageViewsPerVideo,
-          videos: [], // Não mostrar vídeos individuais no modo grupo por ora
         }));
         
         setRanking(groupRanking);
@@ -105,14 +115,51 @@ export default function TrendingPage() {
     return period?.label || 'Últimos 30 dias';
   };
 
+  const fetchChannelVideos = async (channelId: string, loadMore: boolean = false) => {
+    if (loadingVideos.has(channelId)) return; // Já está carregando
+    
+    setLoadingVideos(new Set(loadingVideos).add(channelId));
+    
+    try {
+      const lastVideoId = loadMore ? lastVideoIds.get(channelId) : null;
+      const videoTypeParam = selectedType !== 'all' ? `&videoType=${selectedType}` : '';
+      const lastVideoParam = lastVideoId ? `&lastVideoId=${lastVideoId}` : '';
+      
+      const { data } = await axios.get(
+        `/api/videos/by-channel?channelId=${channelId}&daysAgo=${selectedPeriod}&limit=${VIDEOS_PER_PAGE}${videoTypeParam}${lastVideoParam}`
+      );
+      
+      const currentVideos = channelVideos.get(channelId) || [];
+      const newVideos = loadMore ? [...currentVideos, ...data.videos] : data.videos;
+      
+      setChannelVideos(new Map(channelVideos).set(channelId, newVideos));
+      setLastVideoIds(new Map(lastVideoIds).set(channelId, data.lastVideoId));
+      setHasMoreVideos(new Map(hasMoreVideos).set(channelId, data.hasMore));
+    } catch (error) {
+      console.error('Error fetching channel videos:', error);
+    } finally {
+      const newLoadingVideos = new Set(loadingVideos);
+      newLoadingVideos.delete(channelId);
+      setLoadingVideos(newLoadingVideos);
+    }
+  };
+
   const toggleRow = (channelId: string) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(channelId)) {
       newExpanded.delete(channelId);
     } else {
       newExpanded.add(channelId);
+      // Buscar vídeos se ainda não foram carregados
+      if (!channelVideos.has(channelId)) {
+        fetchChannelVideos(channelId);
+      }
     }
     setExpandedRows(newExpanded);
+  };
+
+  const loadMoreVideos = (channelId: string) => {
+    fetchChannelVideos(channelId, true);
   };
 
   const getVideoTypeIcon = (type: string) => {
@@ -420,17 +467,22 @@ export default function TrendingPage() {
                         </td>
                       </tr>
                       {/* Expanded Row - Videos List */}
-                      {isExpanded && channel.videos && channel.videos.length > 0 && (
+                      {isExpanded && (
                         <tr className="bg-gray-50 dark:bg-gray-900">
                           <td colSpan={6} className="px-6 py-4">
                             <div className="space-y-3">
                               <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                📹 Vídeos do período ({channel.videos.length})
+                                📹 Vídeos do período ({channel.periodVideos} total)
                               </div>
-                              <div className="grid gap-3 max-h-96 overflow-y-auto">
-                                {channel.videos
-                                  .sort((a, b) => b.viewCount - a.viewCount)
-                                  .map((video) => (
+                              
+                              {loadingVideos.has(channel.id) && !channelVideos.has(channel.id) ? (
+                                <div className="flex justify-center py-8">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                </div>
+                              ) : channelVideos.get(channel.id) && channelVideos.get(channel.id)!.length > 0 ? (
+                                <>
+                                  <div className={`grid gap-3 ${channelVideos.get(channel.id)!.length > 10 ? 'max-h-96 overflow-y-auto' : ''}`}>
+                                    {channelVideos.get(channel.id)!.map((video) => (
                                   <div 
                                     key={video.id}
                                     className="flex items-start gap-3 bg-white dark:bg-gray-800 p-3 rounded-lg hover:shadow-md transition-shadow"
@@ -487,7 +539,36 @@ export default function TrendingPage() {
                                     </div>
                                   </div>
                                 ))}
-                              </div>
+                                  </div>
+                                  
+                                  {/* Botão Carregar Mais */}
+                                  {hasMoreVideos.get(channel.id) && (
+                                    <div className="flex justify-center mt-4">
+                                      <button
+                                        onClick={() => loadMoreVideos(channel.id)}
+                                        disabled={loadingVideos.has(channel.id)}
+                                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        {loadingVideos.has(channel.id) ? (
+                                          <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                            Carregando...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ChevronDown className="w-4 h-4" />
+                                            Carregar mais vídeos
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                  Nenhum vídeo encontrado para este período.
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>

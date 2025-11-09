@@ -16,13 +16,12 @@ export async function GET(request: NextRequest) {
 
     // console.log(videos.map(video => ({ title: video.title, publishedAt: video.publishedAt })));
     
-    // Calculate views per channel in the period and group videos
+    // Calculate views per channel in the period (sem incluir lista de vídeos)
     const channelViews = new Map<string, {
       viewCount: number;
       videoCount: number;
       likeCount: number;
       commentCount: number;
-      videos: any[];
     }>();
     
     videos.forEach(video => {
@@ -31,7 +30,6 @@ export async function GET(request: NextRequest) {
         videoCount: 0,
         likeCount: 0,
         commentCount: 0,
-        videos: [],
       };
       
       channelViews.set(video.channelId, {
@@ -39,27 +37,16 @@ export async function GET(request: NextRequest) {
         videoCount: existing.videoCount + 1,
         likeCount: existing.likeCount + video.likeCount,
         commentCount: existing.commentCount + video.commentCount,
-        videos: [...existing.videos, {
-          id: video.id,
-          title: video.title,
-          thumbnailUrl: video.thumbnailUrl,
-          publishedAt: video.publishedAt,
-          viewCount: video.viewCount,
-          likeCount: video.likeCount,
-          commentCount: video.commentCount,
-          videoType: video.videoType,
-        }],
       });
     });
     
-    // Combine channel data with period stats
+    // Combine channel data with period stats (vídeos serão buscados sob demanda)
     const ranking = channels.map(channel => {
       const periodStats = channelViews.get(channel.id) || {
         viewCount: 0,
         videoCount: 0,
         likeCount: 0,
         commentCount: 0,
-        videos: [],
       };
       
       return {
@@ -68,7 +55,6 @@ export async function GET(request: NextRequest) {
         periodVideos: periodStats.videoCount,
         periodLikes: periodStats.likeCount,
         periodComments: periodStats.commentCount,
-        videos: periodStats.videos,
         engagementRate: periodStats.viewCount > 0 
           ? ((periodStats.likeCount + periodStats.commentCount) / periodStats.viewCount) * 100 
           : 0,

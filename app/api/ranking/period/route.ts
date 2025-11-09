@@ -5,13 +5,14 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const period = searchParams.get('period') || '30'; // 30, 14, 7, 1
+    const videoType = searchParams.get('type') as 'normal' | 'shorts' | 'live' | null; // Filtro de tipo
     const daysAgo = parseInt(period);
     
     // Get all channels
     const channels = await getAllChannels();
     
-    // Get videos from the period
-    const videos = await getVideosByDateRange(daysAgo);
+    // Get videos from the period (com filtro de tipo opcional)
+    const videos = await getVideosByDateRange(daysAgo, videoType || undefined);
 
     // console.log(videos.map(video => ({ title: video.title, publishedAt: video.publishedAt })));
     

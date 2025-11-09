@@ -24,20 +24,29 @@ const PERIODS = [
   { value: '30', label: 'Últimos 30 dias', icon: Calendar },
 ];
 
+const VIDEO_TYPES = [
+  { value: 'all', label: 'Todos', icon: '📺' },
+  { value: 'normal', label: 'Vídeos Normais', icon: '🎬' },
+  { value: 'shorts', label: 'Shorts', icon: '📱' },
+  { value: 'live', label: 'Lives', icon: '🔴' },
+];
+
 export default function TrendingPage() {
   const [ranking, setRanking] = useState<PeriodChannel[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('30');
+  const [selectedType, setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
     fetchRanking();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, selectedType]);
 
   const fetchRanking = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`/api/ranking/period?period=${selectedPeriod}`);
+      const typeParam = selectedType !== 'all' ? `&type=${selectedType}` : '';
+      const { data } = await axios.get(`/api/ranking/period?period=${selectedPeriod}${typeParam}`);
       setRanking(data.ranking || []);
       setHasData(data.ranking && data.ranking.length > 0 && data.ranking.some((c: PeriodChannel) => c.periodViews > 0));
     } catch (error) {
@@ -82,29 +91,55 @@ export default function TrendingPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Period Selector */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Selecione o Período
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {PERIODS.map((period) => {
-              const Icon = period.icon;
-              return (
+        {/* Filters */}
+        <div className="mb-6 space-y-6">
+          {/* Period Selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Selecione o Período
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {PERIODS.map((period) => {
+                const Icon = period.icon;
+                return (
+                  <button
+                    key={period.value}
+                    onClick={() => setSelectedPeriod(period.value)}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
+                      selectedPeriod === period.value
+                        ? 'bg-orange-600 text-white shadow-lg scale-105'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {period.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Video Type Selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Tipo de Vídeo
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {VIDEO_TYPES.map((type) => (
                 <button
-                  key={period.value}
-                  onClick={() => setSelectedPeriod(period.value)}
+                  key={type.value}
+                  onClick={() => setSelectedType(type.value)}
                   className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
-                    selectedPeriod === period.value
-                      ? 'bg-orange-600 text-white shadow-lg scale-105'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                    selectedType === type.value
+                      ? 'bg-blue-600 text-white shadow-lg scale-105'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  {period.label}
+                  <span className="text-xl">{type.icon}</span>
+                  {type.label}
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
         </div>
 

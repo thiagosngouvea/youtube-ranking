@@ -27,6 +27,7 @@ export interface Video {
   likeCount: number;
   commentCount: number;
   duration: string;
+  videoType: 'normal' | 'shorts' | 'live';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -123,6 +124,7 @@ export async function saveVideo(video: Omit<Video, 'createdAt' | 'updatedAt'>): 
   await videoRef.set({
     ...video,
     viewCount: Number(video.viewCount),
+    videoType: video.videoType || 'normal',
     publishedAt: Timestamp.fromDate(video.publishedAt),
     updatedAt: now,
   }, { merge: true });
@@ -153,6 +155,7 @@ export async function getChannelVideos(channelId: string, limit: number = 50): P
       likeCount: data.likeCount || 0,
       commentCount: data.commentCount || 0,
       duration: data.duration || '',
+      videoType: data.videoType || 'normal',
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
     };
@@ -182,6 +185,7 @@ export async function getRecentVideos(channelId: string, daysAgo: number = 30): 
       likeCount: data.likeCount || 0,
       commentCount: data.commentCount || 0,
       duration: data.duration || '',
+      videoType: data.videoType || 'normal',
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
     };
@@ -253,15 +257,19 @@ export async function getLatestChannelStats(channelId: string): Promise<ChannelS
 }
 
 // Get videos by date range for all channels
-export async function getVideosByDateRange(daysAgo: number): Promise<Video[]> {
+export async function getVideosByDateRange(daysAgo: number, videoType?: 'normal' | 'shorts' | 'live'): Promise<Video[]> {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
   date.setHours(0, 0, 0, 0);
   
-  const snapshot = await db.collection('videos')
-    .where('publishedAt', '>=', Timestamp.fromDate(date))
-    .orderBy('publishedAt', 'desc')
-    .get();
+  let query = db.collection('videos')
+    .where('publishedAt', '>=', Timestamp.fromDate(date));
+  
+  if (videoType) {
+    query = query.where('videoType', '==', videoType) as any;
+  }
+  
+  const snapshot = await query.orderBy('publishedAt', 'desc').get();
   
   return snapshot.docs.map(doc => {
     const data = doc.data();
@@ -276,6 +284,7 @@ export async function getVideosByDateRange(daysAgo: number): Promise<Video[]> {
       likeCount: data.likeCount || 0,
       commentCount: data.commentCount || 0,
       duration: data.duration || '',
+      videoType: data.videoType || 'normal',
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate() || new Date(),
     };

@@ -26,6 +26,37 @@ export interface YouTubeVideo {
   likeCount: number;
   commentCount: number;
   duration: string;
+  videoType: 'normal' | 'shorts' | 'live';
+}
+
+/**
+ * Detecta o tipo de vídeo baseado na duração e no status de transmissão
+ * - Shorts: duração <= 60 segundos
+ * - Live: liveBroadcastContent = 'live' ou 'upcoming'
+ * - Normal: demais vídeos
+ */
+function detectVideoType(duration: string, liveBroadcastContent?: string): 'normal' | 'shorts' | 'live' {
+  // Se é ou foi uma live
+  if (liveBroadcastContent === 'live' || liveBroadcastContent === 'upcoming') {
+    return 'live';
+  }
+  
+  // Parse ISO 8601 duration (ex: PT1M30S = 1 minuto e 30 segundos)
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (match) {
+    const hours = parseInt(match[1] || '0');
+    const minutes = parseInt(match[2] || '0');
+    const seconds = parseInt(match[3] || '0');
+    
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    
+    // Shorts são vídeos de até 60 segundos
+    if (totalSeconds <= 60) {
+      return 'shorts';
+    }
+  }
+  
+  return 'normal';
 }
 
 export async function getChannelDetails(channelId: string): Promise<YouTubeChannel | null> {
@@ -121,6 +152,10 @@ export async function getChannelVideos(
         return null;
       }
 
+      const duration = video.contentDetails.duration;
+      const liveBroadcastContent = video.snippet.liveBroadcastContent;
+      const videoType = detectVideoType(duration, liveBroadcastContent);
+
       return {
         id: video.id,
         channelId: video.snippet.channelId,
@@ -131,7 +166,8 @@ export async function getChannelVideos(
         viewCount: parseInt(video.statistics.viewCount || '0'),
         likeCount: parseInt(video.statistics.likeCount || '0'),
         commentCount: parseInt(video.statistics.commentCount || '0'),
-        duration: video.contentDetails.duration,
+        duration,
+        videoType,
       };
     }).filter((v: YouTubeVideo | null) => v !== null);
 

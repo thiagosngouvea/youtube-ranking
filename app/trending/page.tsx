@@ -26,6 +26,8 @@ interface PeriodChannel extends Channel {
   periodLikes: number;
   periodComments: number;
   engagementRate: number;
+  relatedChannels?: Channel[]; // Canais relacionados no grupo (para modo grupos)
+  channelsInGroup?: number; // Quantidade de canais no grupo
 }
 
 const PERIODS = [
@@ -76,22 +78,31 @@ export default function TrendingPage() {
         const { data } = await axios.get(`/api/ranking/groups?period=${selectedPeriod}${typeParam}`);
         
         // Converter formato de grupos para o formato PeriodChannel
-        const groupRanking = (data.ranking || []).map((group: any) => ({
-          id: group.primaryChannel.id,
-          title: group.groupName,
-          description: `Grupo com ${group.channelsInGroup} canal(is)`,
-          thumbnailUrl: group.primaryChannel.thumbnailUrl,
-          subscriberCount: group.totalSubscribers,
-          videoCount: group.primaryChannel.videoCount,
-          viewCount: group.primaryChannel.viewCount,
-          category: group.primaryChannel.category,
-          periodViews: group.totalViews,
-          periodVideos: group.totalVideos,
-          periodLikes: group.totalLikes,
-          periodComments: group.totalComments,
-          engagementRate: group.engagementRate,
-          averageViews: group.averageViewsPerVideo,
-        }));
+        const groupRanking = (data.ranking || []).map((group: any) => {
+          // Filtrar apenas canais secundários (excluir o principal)
+          const secondaryChannels = group.channels.filter(
+            (ch: any) => ch.id !== group.primaryChannel.id
+          );
+          
+          return {
+            id: group.primaryChannel.id,
+            title: group.groupName,
+            description: `Grupo com ${group.channelsInGroup} canal(is) - ${secondaryChannels.length} secundário(s)`,
+            thumbnailUrl: group.primaryChannel.thumbnailUrl,
+            subscriberCount: group.totalSubscribers,
+            videoCount: group.primaryChannel.videoCount,
+            viewCount: group.primaryChannel.viewCount,
+            category: group.primaryChannel.category,
+            periodViews: group.totalViews,
+            periodVideos: group.totalVideos,
+            periodLikes: group.totalLikes,
+            periodComments: group.totalComments,
+            engagementRate: group.engagementRate,
+            averageViews: group.averageViewsPerVideo,
+            relatedChannels: secondaryChannels, // Apenas canais secundários
+            channelsInGroup: group.channelsInGroup,
+          };
+        });
         
         setRanking(groupRanking);
         setHasData(groupRanking.length > 0 && groupRanking.some((c: PeriodChannel) => c.periodViews > 0));
@@ -466,20 +477,84 @@ export default function TrendingPage() {
                           {formatNumber(Math.round(avgViewsPerVideo))}
                         </td>
                       </tr>
-                      {/* Expanded Row - Videos List */}
+                      {/* Expanded Row - Show Related Channels (groups) or Videos (individual) */}
                       {isExpanded && (
                         <tr className="bg-gray-50 dark:bg-gray-900">
                           <td colSpan={6} className="px-6 py-4">
-                            <div className="space-y-3">
-                              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                📹 Vídeos do período ({channel.periodVideos} total)
-                              </div>
-                              
-                              {loadingVideos.has(channel.id) && !channelVideos.has(channel.id) ? (
-                                <div className="flex justify-center py-8">
-                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            {viewMode === 'groups' && channel.relatedChannels ? (
+                              /* Modo Grupos - Mostrar Canais Secundários Relacionados */
+                              <div className="space-y-3">
+                                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                                  📊 Canais Secundários Relacionados ({channel.relatedChannels.length})
                                 </div>
-                              ) : channelVideos.get(channel.id) && channelVideos.get(channel.id)!.length > 0 ? (
+                                {channel.relatedChannels.length > 0 ? (
+                                  <div className="grid gap-3">
+                                    {channel.relatedChannels.map((relatedChannel) => (
+                                    <Link
+                                      key={relatedChannel.id}
+                                      href={`/channel/${relatedChannel.id}`}
+                                      className="flex items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg hover:shadow-md transition-shadow"
+                                    >
+                                      {/* Thumbnail do Canal */}
+                                      <div className="flex-shrink-0">
+                                        {relatedChannel.thumbnailUrl ? (
+                                          <Image
+                                            src={relatedChannel.thumbnailUrl}
+                                            alt={relatedChannel.title}
+                                            width={60}
+                                            height={60}
+                                            className="rounded-full"
+                                          />
+                                        ) : (
+                                          <div className="w-[60px] h-[60px] bg-gray-200 dark:bg-gray-700 rounded-full" />
+                                        )}
+                                      </div>
+                                      
+                                      {/* Info do Canal */}
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+                                          {relatedChannel.title}
+                                        </h4>
+                                        <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                          <span className="flex items-center gap-1">
+                                            <span className="font-medium">Categoria:</span> {relatedChannel.category}
+                                          </span>
+                                          <span className="flex items-center gap-1">
+                                            👥 {formatNumber(relatedChannel.subscriberCount)} inscritos
+                                          </span>
+                                          <span className="flex items-center gap-1">
+                                            📹 {formatNumber(relatedChannel.videoCount)} vídeos
+                                          </span>
+                                          <span className="flex items-center gap-1">
+                                            👁️ {formatNumber(relatedChannel.viewCount)} views totais
+                                          </span>
+                                        </div>
+                                      </div>
+                                      
+                                      <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    </Link>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    Este grupo não possui canais secundários associados.
+                                    <br />
+                                    <span className="text-xs">Adicione canais de cortes ou outros na página do canal principal.</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              /* Modo Individual - Mostrar Vídeos */
+                              <div className="space-y-3">
+                                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                                  📹 Vídeos do período ({channel.periodVideos} total)
+                                </div>
+                                
+                                {loadingVideos.has(channel.id) && !channelVideos.has(channel.id) ? (
+                                  <div className="flex justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                  </div>
+                                ) : channelVideos.get(channel.id) && channelVideos.get(channel.id)!.length > 0 ? (
                                 <>
                                   <div className={`grid gap-3 ${channelVideos.get(channel.id)!.length > 10 ? 'max-h-96 overflow-y-auto' : ''}`}>
                                     {channelVideos.get(channel.id)!.map((video) => (
@@ -563,13 +638,14 @@ export default function TrendingPage() {
                                       </button>
                                     </div>
                                   )}
-                                </>
-                              ) : (
-                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                  Nenhum vídeo encontrado para este período.
-                                </div>
-                              )}
-                            </div>
+                                  </>
+                                ) : (
+                                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    Nenhum vídeo encontrado para este período.
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       )}

@@ -481,10 +481,11 @@ export interface GroupMetrics {
 
 export async function getGroupMetrics(
   primaryChannelId: string,
-  daysAgo?: number
+  daysAgo?: number,
+  videoType?: 'normal' | 'shorts'
 ): Promise<GroupMetrics> {
   // Verificar cache primeiro
-  const cacheKey = `group_metrics_${primaryChannelId}_${daysAgo || 'all'}`;
+  const cacheKey = `group_metrics_${primaryChannelId}_${daysAgo || 'all'}_${videoType || 'all'}`;
   const cached = cache.get<GroupMetrics>(cacheKey);
   if (cached) {
     return cached;
@@ -508,10 +509,16 @@ export async function getGroupMetrics(
     // Buscar vídeos em chunks de 10 (limite do Firestore para 'in')
     for (let i = 0; i < channelIds.length; i += 10) {
       const chunk = channelIds.slice(i, i + 10);
-      const snapshot = await db.collection('videos')
+      let query = db.collection('videos')
         .where('channelId', 'in', chunk)
-        .where('publishedAt', '>=', Timestamp.fromDate(date))
-        .get();
+        .where('publishedAt', '>=', Timestamp.fromDate(date));
+      
+      // Filtrar por tipo de vídeo se especificado
+      if (videoType) {
+        query = query.where('videoType', '==', videoType) as any;
+      }
+      
+      const snapshot = await query.get();
       
       snapshot.docs.forEach(doc => {
         const data = doc.data();

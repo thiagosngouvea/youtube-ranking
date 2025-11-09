@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     // Calcular métricas agregadas para cada grupo
     const groupsWithMetrics = await Promise.all(
       primaryChannels.map(async (channel) => {
-        const metrics = await getGroupMetrics(channel.id, daysAgo);
+        const metrics = await getGroupMetrics(channel.id, daysAgo, videoType || undefined);
         
         return {
           primaryChannel: channel,

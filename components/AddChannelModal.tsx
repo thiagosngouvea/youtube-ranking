@@ -12,7 +12,7 @@ interface AddChannelModalProps {
 
 export default function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelModalProps) {
   const [channelId, setChannelId] = useState('');
-  const [category, setCategory] = useState('general');
+  const [category, setCategory] = useState('principal');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,7 +24,7 @@ export default function AddChannelModal({ isOpen, onClose, onAdd }: AddChannelMo
     try {
       await onAdd(channelId, category);
       setChannelId('');
-      setCategory('general');
+      setCategory('principal');
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao adicionar canal');

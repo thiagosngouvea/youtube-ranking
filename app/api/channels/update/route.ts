@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     
     if (channelId) {
       // Update single channel
-      channelsToUpdate = [{ id: channelId, category: 'general' }];
+      channelsToUpdate = [{ id: channelId, category: 'principal' }];
     } else {
       // Update all channels
       const allChannels = await getAllChannels();

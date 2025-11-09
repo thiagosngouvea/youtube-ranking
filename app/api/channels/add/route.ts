@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Save to database
     await saveChannel({
       ...channelData,
-      category: category || 'general',
+      category: category || 'principal',
     });
     
     return NextResponse.json({ 

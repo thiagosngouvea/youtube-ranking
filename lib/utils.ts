@@ -43,14 +43,8 @@ export function calculateEngagementRate(likes: number, comments: number, views: 
 
 export const CATEGORIES = [
   { value: 'all', label: 'Todas as Categorias' },
-  { value: 'humor', label: 'Humor' },
-  { value: 'entrevistas', label: 'Entrevistas' },
-  { value: 'politica', label: 'Política' },
-  { value: 'negocios', label: 'Negócios' },
-  { value: 'esportes', label: 'Esportes' },
-  { value: 'tecnologia', label: 'Tecnologia' },
-  { value: 'educacao', label: 'Educação' },
-  { value: 'entretenimento', label: 'Entretenimento' },
-  { value: 'general', label: 'Geral' },
+  { value: 'principal', label: 'Principal' },
+  { value: 'cortes', label: 'Cortes' },
+  { value: 'outros', label: 'Outros' },
 ];
 

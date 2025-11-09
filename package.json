@@ -7,11 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "init-firestore": "ts-node scripts/init-firestore.ts"
+    "init-firestore": "ts-node scripts/init-firestore.ts",
+    "migrate-categories": "npx ts-node scripts/migrate-categories.ts"
   },
   "dependencies": {
     "axios": "^1.13.2",
     "date-fns": "^3.6.0",
+    "dotenv": "^16.4.5",
     "firebase": "^10.13.0",
     "firebase-admin": "^12.3.1",
     "lucide-react": "^0.436.0",

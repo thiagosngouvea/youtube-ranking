@@ -95,7 +95,7 @@ export default function RankingTable({ channels, previousStats }: RankingTablePr
                       </div>
                       {channel.customUrl && (
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          @{channel.customUrl}
+                          {channel.customUrl}
                         </div>
                       )}
                     </div>

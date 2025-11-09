@@ -19,7 +19,6 @@ export interface Channel {
   parentChannelId?: string; // ID do canal principal (se for secundário)
   secondaryChannelIds?: string[]; // IDs dos canais secundários (se for principal)
   groupName?: string; // Nome do grupo (ex: "Flow Podcast Network")
-  channelType: 'primary' | 'secondary'; // Tipo do canal
 }
 
 export interface Video {
@@ -62,7 +61,6 @@ export async function saveChannel(channel: Omit<Channel, 'createdAt' | 'updatedA
     publishedAt: Timestamp.fromDate(channel.publishedAt),
     updatedAt: now,
     // Garantir valores padrão para campos de agrupamento
-    channelType: channel.channelType || 'primary',
     parentChannelId: channel.parentChannelId || null,
     secondaryChannelIds: channel.secondaryChannelIds || [],
     groupName: channel.groupName || null,
@@ -101,7 +99,6 @@ export async function getChannel(channelId: string): Promise<Channel | null> {
     viewCount: data.viewCount || 0,
     category: data.category || 'principal',
     customUrl: data.customUrl,
-    channelType: data.channelType || 'primary',
     parentChannelId: data.parentChannelId || undefined,
     secondaryChannelIds: data.secondaryChannelIds || [],
     groupName: data.groupName || undefined,
@@ -143,7 +140,6 @@ export async function getAllChannels(category?: string): Promise<Channel[]> {
       viewCount: data.viewCount || 0,
       category: data.category || 'principal',
       customUrl: data.customUrl,
-      channelType: data.channelType || 'primary',
       parentChannelId: data.parentChannelId || undefined,
       secondaryChannelIds: data.secondaryChannelIds || [],
       groupName: data.groupName || undefined,
@@ -375,7 +371,6 @@ export async function addSecondaryChannel(
   if (!currentSecondaryIds.includes(secondaryChannelId)) {
     await primaryRef.update({
       secondaryChannelIds: [...currentSecondaryIds, secondaryChannelId],
-      channelType: 'primary',
       groupName: groupName || primaryData.groupName || primaryData.title,
       updatedAt: Timestamp.now(),
     });
@@ -383,7 +378,6 @@ export async function addSecondaryChannel(
   
   await secondaryRef.update({
     parentChannelId: primaryChannelId,
-    channelType: 'secondary',
     groupName: groupName || primaryData.groupName || primaryData.title,
     updatedAt: Timestamp.now(),
   });
@@ -414,7 +408,6 @@ export async function removeSecondaryChannel(
   
   await secondaryRef.update({
     parentChannelId: FieldValue.delete(),
-    channelType: 'primary',
     groupName: FieldValue.delete(),
     updatedAt: Timestamp.now(),
   });
@@ -442,16 +435,12 @@ export async function getChannelGroup(primaryChannelId: string): Promise<Channel
 }
 
 /**
- * Busca apenas canais principais (sem os secundários na listagem principal)
+ * Busca apenas canais principais (categoria 'principal')
  */
 export async function getPrimaryChannels(category?: string): Promise<Channel[]> {
   let query = db.collection('channels')
-    .where('channelType', '==', 'primary')
+    .where('category', '==', 'principal')
     .orderBy('viewCount', 'desc');
-  
-  if (category && category !== 'all') {
-    query = query.where('category', '==', category) as any;
-  }
   
   const snapshot = await query.get();
   
@@ -467,7 +456,6 @@ export async function getPrimaryChannels(category?: string): Promise<Channel[]> 
       viewCount: data.viewCount || 0,
       category: data.category || 'principal',
       customUrl: data.customUrl,
-      channelType: data.channelType || 'primary',
       parentChannelId: data.parentChannelId || undefined,
       secondaryChannelIds: data.secondaryChannelIds || [],
       groupName: data.groupName || undefined,
@@ -546,7 +534,7 @@ export async function getGroupMetrics(
     totalSubscribers += channel.subscriberCount;
   });
   
-  const primary = channels.find(c => c.channelType === 'primary');
+  const primary = channels.find(c => c.category === 'principal');
   const groupName = primary?.groupName || primary?.title || 'Grupo sem nome';
   
   const metrics: GroupMetrics = {

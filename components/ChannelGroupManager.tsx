@@ -8,7 +8,7 @@ interface Channel {
   id: string;
   title: string;
   thumbnailUrl: string;
-  channelType: 'primary' | 'secondary';
+  category: string;
   groupName?: string;
 }
 
@@ -42,10 +42,10 @@ export default function ChannelGroupManager({
   const [error, setError] = useState('');
 
   // Filtrar apenas canais que podem ser adicionados (não são secundários de outros grupos e não o próprio canal)
+  // Aceita canais de qualquer categoria que não seja o próprio canal principal e que não esteja em outro grupo
   const availableChannels = allChannels.filter(
     ch => 
       ch.id !== primaryChannel.id && 
-      ch.channelType === 'primary' &&
       !secondaryChannels.some(sec => sec.id === ch.id)
   );
 

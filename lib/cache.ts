@@ -122,11 +122,13 @@ class MemoryCache {
 export const cache = new MemoryCache();
 
 // TTLs pré-definidos
+// Como os dados são atualizados apenas a cada 12 horas,
+// todos podem ter cache de 12 horas para máxima economia
 export const CACHE_TTL = {
-  VIDEOS: 12 * 60 * 60 * 1000,      // 12 horas - dados atualizados a cada 12h
-  CHANNELS: 5 * 60 * 1000,           // 5 minutos - pode mudar com mais frequência
-  STATS: 15 * 60 * 1000,             // 15 minutos
-  RANKING: 30 * 60 * 1000,           // 30 minutos
+  VIDEOS: 12 * 60 * 60 * 1000,      // 12 horas
+  CHANNELS: 1 * 60 * 1000,    // 12 horas
+  STATS: 12 * 60 * 60 * 1000,       // 12 horas
+  RANKING: 12 * 60 * 60 * 1000,     // 12 horas
 } as const;
 
 // Cleanup automático a cada 1 hora

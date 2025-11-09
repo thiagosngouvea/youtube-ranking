@@ -16,7 +16,7 @@ export default function Home() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [channelView, setChannelView] = useState<'all' | 'primary' | 'secondary'>('primary'); // Filtro por tipo de canal
+  const [channelView, setChannelView] = useState<'all' | 'principal' | 'cortes_outros'>('principal'); // Filtro por categoria
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,16 +28,16 @@ export default function Home() {
   useEffect(() => {
     let filtered = channels;
     
-    // Filtrar por categoria
+    // Filtrar por categoria (novo sistema combinado)
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(c => c.category === selectedCategory);
     }
     
-    // Filtrar por tipo de canal
-    if (channelView === 'primary') {
-      filtered = filtered.filter(c => c.channelType === 'primary');
-    } else if (channelView === 'secondary') {
-      filtered = filtered.filter(c => c.channelType === 'secondary');
+    // Filtrar por visualização (principal vs cortes+outros)
+    if (channelView === 'principal') {
+      filtered = filtered.filter(c => c.category === 'principal');
+    } else if (channelView === 'cortes_outros') {
+      filtered = filtered.filter(c => c.category === 'cortes' || c.category === 'outros');
     }
     // 'all' mostra todos os canais
     
@@ -151,14 +151,24 @@ export default function Home() {
                 </label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setChannelView('primary')}
+                    onClick={() => setChannelView('principal')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      channelView === 'primary'
+                      channelView === 'principal'
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                     }`}
                   >
-                    📌 Principais
+                    📌 Principal
+                  </button>
+                  <button
+                    onClick={() => setChannelView('cortes_outros')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      channelView === 'cortes_outros'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    ✂️ Cortes + Outros
                   </button>
                   <button
                     onClick={() => setChannelView('all')}
@@ -170,16 +180,6 @@ export default function Home() {
                   >
                     📺 Todos
                   </button>
-                  <button
-                    onClick={() => setChannelView('secondary')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      channelView === 'secondary'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    🔗 Secundários
-                  </button>
                 </div>
               </div>
             </div>
@@ -190,9 +190,9 @@ export default function Home() {
           </div>
 
           {/* Info sobre filtro ativo */}
-          {channelView === 'secondary' && filteredChannels.length === 0 && (
+          {channelView === 'cortes_outros' && filteredChannels.length === 0 && (
             <div className="p-3 bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300">
-              💡 Nenhum canal secundário encontrado. Adicione canais secundários através da página de cada canal principal.
+              💡 Nenhum canal de cortes ou outros encontrado. Adicione canais com a categoria "Cortes" ou "Outros".
             </div>
           )}
         </div>

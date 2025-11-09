@@ -2,7 +2,7 @@
  * Script de Migração de Categorias
  * 
  * Atualiza todas as categorias antigas para as novas:
- * - "geral" ou qualquer outra categoria antiga → "principal"
+ * - "geral" ou qualquer outra categoria antiga → "principal", "cortes" ou "outros"
  * 
  * Como executar:
  * npx ts-node scripts/migrate-categories.ts
@@ -78,7 +78,7 @@ async function migrateCategories() {
         const newCategory = CATEGORY_MAPPING[currentCategory] || 'principal';
         
         console.log(`  📝 Canal: ${data.title || doc.id}`);
-        console.log(`     Categoria antiga: "${currentCategory}" → Nova: "${newCategory}"`);
+        console.log(`     Categoria: "${currentCategory}" → "${newCategory}"`);
         
         updates.push(
           doc.ref.update({

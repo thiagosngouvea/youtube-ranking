@@ -14,7 +14,7 @@ const exampleChannels = [
     subscriberCount: 0,
     videoCount: 0,
     viewCount: 0,
-    category: 'entrevistas',
+    category: 'principal',
     publishedAt: new Date(),
   },
   {
@@ -25,7 +25,7 @@ const exampleChannels = [
     subscriberCount: 0,
     videoCount: 0,
     viewCount: 0,
-    category: 'humor',
+    category: 'principal',
     publishedAt: new Date(),
   },
 ];

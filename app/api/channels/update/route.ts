@@ -11,8 +11,10 @@ export async function POST(request: NextRequest) {
     let channelsToUpdate = [];
     
     if (channelId) {
-      // Update single channel
-      channelsToUpdate = [{ id: channelId, category: 'principal' }];
+      // Update single channel - buscar categoria atual do canal
+      const existingChannel = await getAllChannels();
+      const channel = existingChannel.find(c => c.id === channelId);
+      channelsToUpdate = [{ id: channelId, category: channel?.category || 'principal' }];
     } else {
       // Update all channels
       const allChannels = await getAllChannels();

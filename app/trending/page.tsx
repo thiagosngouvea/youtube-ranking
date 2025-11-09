@@ -74,7 +74,6 @@ export default function TrendingPage() {
           videoCount: group.primaryChannel.videoCount,
           viewCount: group.primaryChannel.viewCount,
           category: group.primaryChannel.category,
-          channelType: group.primaryChannel.channelType,
           periodViews: group.totalViews,
           periodVideos: group.totalVideos,
           periodLikes: group.totalLikes,

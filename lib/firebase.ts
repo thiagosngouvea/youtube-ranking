@@ -1,5 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 // Initialize Firebase Admin (server-side only)
 if (!getApps().length) {
@@ -17,5 +18,6 @@ if (!getApps().length) {
 }
 
 export const db = getFirestore();
+export const adminAuth = getAuth();
 export default db;
 

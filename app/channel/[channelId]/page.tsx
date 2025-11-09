@@ -10,8 +10,12 @@ import Loading from '@/components/Loading';
 import ChannelGroupManager from '@/components/ChannelGroupManager';
 import { ArrowLeft, ExternalLink, Users, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from '@/lib/auth-context';
+import { useAuthAxios } from '@/lib/use-auth-axios';
 
 export default function ChannelPage() {
+  const { isAdmin } = useAuth();
+  const authAxios = useAuthAxios();
   const params = useParams();
   const router = useRouter();
   const channelId = params.channelId as string;
@@ -61,10 +65,14 @@ export default function ChannelPage() {
 
   const handleAddSecondary = async (secondaryChannelId: string, groupName?: string) => {
     try {
-      await axios.post('/api/channels/group/add', {
-        primaryChannelId: channelId,
-        secondaryChannelId,
-        groupName,
+      await authAxios({
+        method: 'POST',
+        url: '/api/channels/group/add',
+        data: {
+          primaryChannelId: channelId,
+          secondaryChannelId,
+          groupName,
+        }
       });
       await fetchChannelData();
     } catch (error) {
@@ -74,9 +82,13 @@ export default function ChannelPage() {
 
   const handleRemoveSecondary = async (secondaryChannelId: string) => {
     try {
-      await axios.post('/api/channels/group/remove', {
-        primaryChannelId: channelId,
-        secondaryChannelId,
+      await authAxios({
+        method: 'POST',
+        url: '/api/channels/group/remove',
+        data: {
+          primaryChannelId: channelId,
+          secondaryChannelId,
+        }
       });
       await fetchChannelData();
     } catch (error) {
@@ -89,8 +101,12 @@ export default function ChannelPage() {
     
     setUpdating(true);
     try {
-      await axios.post('/api/channels/update', {
-        channelId: channelId,
+      await authAxios({
+        method: 'POST',
+        url: '/api/channels/update',
+        data: {
+          channelId: channelId,
+        }
       });
       
       // Recarregar dados após atualização
@@ -178,35 +194,37 @@ export default function ChannelPage() {
               </div>
             </div>
             
-            {/* Botões de ação */}
-            <div className="flex items-center gap-3">
-              {/* Botão Atualizar Canal */}
-              <button
-                onClick={handleUpdateChannel}
-                disabled={updating}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Atualizar dados deste canal"
-              >
-                <RefreshCw className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} />
-                {updating ? 'Atualizando...' : 'Atualizar Canal'}
-              </button>
-
-              {/* Botão Gerenciar Grupo - apenas para canais principais */}
-              {channel.category === 'principal' && (
+            {/* Botões de ação - apenas para Admin */}
+            {isAdmin && (
+              <div className="flex items-center gap-3">
+                {/* Botão Atualizar Canal */}
                 <button
-                  onClick={() => setShowGroupManager(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={handleUpdateChannel}
+                  disabled={updating}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Atualizar dados deste canal"
                 >
-                  <Users className="w-4 h-4" />
-                  Gerenciar Grupo
-                  {secondaryChannels.length > 0 && (
-                    <span className="ml-1 px-2 py-0.5 bg-blue-500 rounded-full text-xs">
-                      {secondaryChannels.length}
-                    </span>
-                  )}
+                  <RefreshCw className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} />
+                  {updating ? 'Atualizando...' : 'Atualizar Canal'}
                 </button>
-              )}
-            </div>
+
+                {/* Botão Gerenciar Grupo - apenas para canais principais */}
+                {channel.category === 'principal' && (
+                  <button
+                    onClick={() => setShowGroupManager(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    Gerenciar Grupo
+                    {secondaryChannels.length > 0 && (
+                      <span className="ml-1 px-2 py-0.5 bg-blue-500 rounded-full text-xs">
+                        {secondaryChannels.length}
+                      </span>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>

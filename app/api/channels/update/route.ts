@@ -2,8 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAllChannels, saveChannel, saveVideo, saveChannelStats, getRecentVideos, getChannel } from '@/lib/db';
 import { getChannelDetails, getChannelVideos } from '@/lib/youtube';
 import { invalidateAfterUpdate } from '@/lib/cache';
+import { requireAdmin } from '@/lib/auth-api';
 
 export async function POST(request: NextRequest) {
+  // Verificar se é admin
+  const authError = await requireAdmin(request);
+  if (authError) {
+    return NextResponse.json(
+      { error: authError.error },
+      { status: authError.status }
+    );
+  }
+
   try {
     const body = await request.json();
     const { channelId } = body;

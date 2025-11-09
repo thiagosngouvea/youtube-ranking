@@ -1,14 +1,14 @@
 # 🔐 Configuração de Autenticação
 
-Este sistema possui autenticação para proteger funcionalidades administrativas.
+Este sistema possui autenticação completa com Firebase Auth para proteger funcionalidades administrativas.
 
 ## 📋 Funcionalidades Protegidas
 
 Apenas usuários **admin** autenticados podem:
 - ✏️ Adicionar novos canais
-- 🔄 Atualizar dados dos canais
-- 👥 Gerenciar grupos de canais
-- ❌ Remover canais (se implementado)
+- 🔄 Atualizar dados dos canais (geral e individual)
+- 👥 Gerenciar grupos de canais (adicionar/remover canais secundários)
+- ❌ Remover canais secundários de grupos
 
 ## 🚀 Configuração Rápida
 
@@ -25,14 +25,25 @@ Apenas usuários **admin** autenticados podem:
 
 ### 2. Configurar Emails Admin
 
-Edite o arquivo `lib/auth-context.tsx`:
+Edite os arquivos de configuração (em ambos os lugares):
 
+**Frontend** - `lib/auth-context.tsx` (linha 30):
 ```typescript
 const ADMIN_EMAILS = [
-  'admin@example.com',        // ← Altere para seu email
-  'seu-email@dominio.com',    // Adicione mais admins aqui
+  'thiagonunes026@gmail.com', // ← Seu email já configurado
+  'outro-admin@dominio.com',  // Adicione mais admins aqui
 ];
 ```
+
+**Backend** - `lib/auth-api.ts` (linha 6):
+```typescript
+const ADMIN_EMAILS = [
+  'thiagonunes026@gmail.com', // ← Seu email já configurado
+  'outro-admin@dominio.com',  // Adicione mais admins aqui
+];
+```
+
+⚠️ **IMPORTANTE**: Adicione o email em **ambos** os arquivos!
 
 ### 3. Testar o Sistema
 
@@ -51,37 +62,31 @@ const ADMIN_EMAILS = [
 
 ## 🛡️ Segurança
 
-### ⚠️ IMPORTANTE: Ambiente de Desenvolvimento
+### ✅ Sistema de Segurança Implementado
 
-O sistema atual usa proteção básica. Para **produção**, implemente:
+O sistema usa **Firebase Admin SDK** para verificação de tokens JWT em todas as rotas protegidas:
 
-1. **Firebase Admin SDK** para verificação de tokens
-2. **Custom Claims** do Firebase para roles de usuário
-3. **API Keys** em variáveis de ambiente
-4. **HTTPS** obrigatório
+- ✅ Verificação de token JWT usando Firebase Admin SDK
+- ✅ Lista de emails de administradores configurável
+- ✅ Proteção em todas as rotas de API administrativas
+- ✅ Token enviado automaticamente em todas as requisições autenticadas
 
-### 📝 Melhorias para Produção
+### 🔐 Como Funciona
 
-Edite `lib/auth-api.ts` para implementar verificação real:
+1. **Frontend**: Usuário faz login → Firebase Auth gera um token JWT
+2. **Requisição**: Token é automaticamente adicionado no header `Authorization: Bearer <token>`
+3. **Backend**: Firebase Admin SDK verifica o token e valida o email contra a lista de admins
+4. **Resposta**: Se válido, executa a ação. Se inválido, retorna erro 401
 
-```typescript
-import admin from 'firebase-admin';
+### 📝 Melhorias Recomendadas para Produção
 
-export async function isAdminUser(request: NextRequest): Promise<boolean> {
-  try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) return false;
-    
-    const token = authHeader.replace('Bearer ', '');
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    
-    // Verificar custom claims
-    return decodedToken.admin === true;
-  } catch (error) {
-    return false;
-  }
-}
-```
+Para ambientes de produção, considere implementar:
+
+1. **Custom Claims** do Firebase para roles de usuário
+2. **HTTPS** obrigatório (já necessário pelo Firebase Auth)
+3. **Rate Limiting** nas rotas de API
+4. **Logs de auditoria** para ações administrativas
+5. **Lista de admins em banco de dados** ao invés de hardcoded
 
 ## 🔑 Gerenciamento de Usuários
 
@@ -117,18 +122,30 @@ export async function isAdminUser(request: NextRequest): Promise<boolean> {
 
 ```
 lib/
-  ├── auth-context.tsx       # Context React de autenticação
-  ├── auth-api.ts           # Verificação de admin nas APIs
-  └── firebase-client.ts    # Firebase client config
+  ├── firebase.ts           # Firebase Admin SDK (server) + adminAuth
+  ├── firebase-client.ts    # Firebase Client SDK + auth
+  ├── auth-context.tsx      # Context React de autenticação
+  ├── auth-api.ts           # Verificação de admin com JWT
+  └── use-auth-axios.ts     # Hook para requisições autenticadas
 
 app/
   ├── login/
-  │   └── page.tsx          # Página de login
-  ├── layout.tsx            # AuthProvider wrapper
-  └── page.tsx              # Proteção de botões admin
+  │   └── page.tsx                    # Página de login
+  ├── channel/[channelId]/
+  │   └── page.tsx                    # ✅ Protegido (Atualizar Canal + Gerenciar Grupo)
+  ├── api/
+  │   ├── channels/
+  │   │   ├── add/route.ts            # ✅ Protegido
+  │   │   ├── update/route.ts         # ✅ Protegido
+  │   │   └── group/
+  │   │       ├── add/route.ts        # ✅ Protegido
+  │   │       └── remove/route.ts     # ✅ Protegido
+  ├── layout.tsx                      # AuthProvider wrapper
+  └── page.tsx                        # ✅ Protegido (Adicionar + Atualizar)
 
 components/
-  └── AuthButton.tsx        # Botão Login/Logout
+  ├── AuthButton.tsx        # Botão Login/Logout
+  └── ChannelGroupManager.tsx  # Gerenciador de grupos
 ```
 
 ## 🎯 Próximos Passos

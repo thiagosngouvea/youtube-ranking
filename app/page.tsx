@@ -13,9 +13,11 @@ import AuthButton from '@/components/AuthButton';
 import { Plus, RefreshCw, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { useAuthAxios } from '@/lib/use-auth-axios';
 
 export default function Home() {
   const { isAdmin } = useAuth();
+  const authAxios = useAuthAxios();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -61,7 +63,11 @@ export default function Home() {
 
   const handleAddChannel = async (channelId: string, category: string) => {
     try {
-      await axios.post('/api/channels/add', { channelId, category });
+      await authAxios({
+        method: 'POST',
+        url: '/api/channels/add',
+        data: { channelId, category }
+      });
       await fetchChannels();
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Erro ao adicionar canal');
@@ -73,7 +79,11 @@ export default function Home() {
     
     try {
       setUpdating(true);
-      await axios.post('/api/channels/update', {});
+      await authAxios({
+        method: 'POST',
+        url: '/api/channels/update',
+        data: {}
+      });
       await fetchChannels();
     } catch (error) {
       console.error('Error updating channels:', error);

@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { removeSecondaryChannel } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth-api';
 
 export async function POST(request: NextRequest) {
+  // Verificar se é admin
+  const authError = await requireAdmin(request);
+  if (authError) {
+    return NextResponse.json(
+      { error: authError.error },
+      { status: authError.status }
+    );
+  }
+
   try {
     const { primaryChannelId, secondaryChannelId } = await request.json();
 

@@ -9,10 +9,13 @@ import AddChannelModal from '@/components/AddChannelModal';
 import ExportButtons from '@/components/ExportButtons';
 import StatsCards from '@/components/StatsCards';
 import Loading from '@/components/Loading';
+import AuthButton from '@/components/AuthButton';
 import { Plus, RefreshCw, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 
 export default function Home() {
+  const { isAdmin } = useAuth();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -100,21 +103,30 @@ export default function Home() {
                 <TrendingUp className="w-4 h-4" />
                 Trending
               </Link>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Adicionar Canal
-              </button>
-              <button
-                onClick={handleUpdateAll}
-                disabled={updating || channels.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <RefreshCw className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} />
-                {updating ? 'Atualizando...' : 'Atualizar Dados'}
-              </button>
+              
+              {/* Botões Admin - apenas para usuários autenticados */}
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Canal
+                  </button>
+                  <button
+                    onClick={handleUpdateAll}
+                    disabled={updating || channels.length === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} />
+                    {updating ? 'Atualizando...' : 'Atualizar Dados'}
+                  </button>
+                </>
+              )}
+              
+              {/* Botão de Auth */}
+              <AuthButton />
             </div>
           </div>
         </div>

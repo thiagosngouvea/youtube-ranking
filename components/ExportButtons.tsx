@@ -29,9 +29,12 @@ export default function ExportButtons({ channels }: ExportButtonsProps) {
     { label: 'URL Customizada', key: 'URL Customizada' },
   ];
 
+  // Type assertion para resolver incompatibilidade de tipos com React 18
+  const CSVLinkComponent = CSVLink as any;
+
   return (
     <div className="flex gap-3">
-      <CSVLink
+      <CSVLinkComponent
         data={csvData}
         headers={csvHeaders}
         filename={`podcast-ranking-${new Date().toISOString().split('T')[0]}.csv`}
@@ -39,7 +42,7 @@ export default function ExportButtons({ channels }: ExportButtonsProps) {
       >
         <Download className="w-4 h-4" />
         Exportar CSV
-      </CSVLink>
+      </CSVLinkComponent>
       
       <button
         onClick={() => window.print()}
